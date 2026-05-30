@@ -1,25 +1,34 @@
-# OpenClaw Workspace
+# 🤖 OpenClaw Workspace
 
-This is the main workspace for all OpenClaw projects.
+Welcome to my OpenClaw development workspace! This repo hosts multiple projects built with OpenClaw — an open-source AI agent framework.
 
-## Projects
+## 📂 Projects
 
-| Branch | Description |
-|--------|-------------|
-| `form-flow` | FormFlow — AI-powered form backend micro-SaaS |
+| Branch | Description | Stack |
+|--------|-------------|-------|
+| [`form-flow`](https://github.com/Dev-Rajeshkumar/openclaw/tree/form-flow) | AI-Powered Form Backend | Next.js 15, Express, Prisma, MongoDB |
+| [`reminder-bot`](https://github.com/Dev-Rajeshkumar/openclaw/tree/reminder-bot) | Telegram Reminder Bot — Birthdays & Events | Python, SQLite, APScheduler |
 
-## Getting Started
-
-Each project lives in its own branch. To work on a project:
+## 🚀 Quick Start
 
 ```bash
+git clone https://github.com/Dev-Rajeshkumar/openclaw.git
+cd openclaw
 git checkout <branch-name>
 ```
 
-## About OpenClaw
+## 🛠️ Tech Stack
 
-OpenClaw is an AI-powered personal assistant platform. This repo hosts various projects built with OpenClaw.
+- **Frontend:** Next.js 15, React, Tailwind CSS, TypeScript
+- **Backend:** Node.js, Express.js, NestJS
+- **Database:** MongoDB, PostgreSQL, SQLite
+- **AI:** OpenAI GPT-4o
+- **Payments:** Stripe
 
----
+## 📝 About
 
-Built with ❤️ by Rajeshkumar S & Maya ✨
+Built by [Rajeshkumar S](https://github.com/Dev-Rajeshkumar) with Maya ✨
+
+## 📄 License
+
+MIT
