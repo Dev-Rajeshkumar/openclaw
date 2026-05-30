@@ -1,0 +1,1 @@
+export{default as submissionRoutes}from"./submission.route";export{submissionService}from"./submission.service";

@@ -1,0 +1,1 @@
+import{Router}from"express";import{paymentController}from"./payment.controller";import{authenticate}from"../../middlewares";const r=Router({mergeParams:true});r.post("/checkout",authenticate,paymentController.createCheckout);r.get("/",authenticate,paymentController.getByForm);export default r;

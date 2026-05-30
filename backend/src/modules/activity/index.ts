@@ -1,0 +1,1 @@
+export{default as activityRoutes}from"./activity.route";export{activityService}from"./activity.service";

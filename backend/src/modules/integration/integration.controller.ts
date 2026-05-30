@@ -1,0 +1,3 @@
+
+import{Request,Response}from"express";import{integrationService}from"./integration.service";import{catchAsync,sendSuccess}from"../../utils";import{AuthenticatedRequest}from"../../types";
+export const integrationController={create:catchAsync(async(req:Request,res:Response)=>{sendSuccess(res,await integrationService.create(req.params.formId,(req as AuthenticatedRequest).user!.id,req.body),201,"Created");}),getByForm:catchAsync(async(req:Request,res:Response)=>{sendSuccess(res,await integrationService.getByForm(req.params.formId,(req as AuthenticatedRequest).user!.id));}),delete:catchAsync(async(req:Request,res:Response)=>{await integrationService.delete(req.params.id,(req as AuthenticatedRequest).user!.id);sendSuccess(res,null,200,"Deleted");}),};

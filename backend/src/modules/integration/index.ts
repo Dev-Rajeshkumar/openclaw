@@ -1,0 +1,1 @@
+export{default as integrationRoutes}from"./integration.route";export{integrationService}from"./integration.service";

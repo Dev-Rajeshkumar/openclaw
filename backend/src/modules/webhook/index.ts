@@ -1,0 +1,1 @@
+export{default as webhookRoutes}from"./webhook.route";export{webhookService}from"./webhook.service";

@@ -1,0 +1,4 @@
+import dotenv from "dotenv"; dotenv.config();
+const req=["DATABASE_URL","PORT","JWT_SECRET","FRONTEND_URL"];
+for(const k of req) if(!process.env[k]) throw new Error(`Missing env: ${k}`);
+export const env={port:parseInt(process.env.PORT||"3001",10),nodeEnv:process.env.NODE_ENV||"development",databaseUrl:process.env.DATABASE_URL!,jwtSecret:process.env.JWT_SECRET!,resendApiKey:process.env.RESEND_API_KEY||"",fromEmail:process.env.FROM_EMAIL||"forms@formflow.app",frontendUrl:process.env.FRONTEND_URL||"http://localhost:3000",corsOrigins:(process.env.CORS_ORIGINS||"http://localhost:3000").split(","),stripeSecretKey:process.env.STRIPE_SECRET_KEY||"",stripeWebhookSecret:process.env.STRIPE_WEBHOOK_SECRET||"",openaiApiKey:process.env.OPENAI_API_KEY||"",turnstileSecretKey:process.env.TURNSTILE_SECRET_KEY||"",discordWebhookUrl:process.env.DISCORD_WEBHOOK_URL||"",alertWebhookUrl:process.env.ALERT_WEBHOOK_URL||""} as const;

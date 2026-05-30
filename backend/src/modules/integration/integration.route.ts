@@ -1,0 +1,1 @@
+import{Router}from"express";import{integrationController}from"./integration.controller";import{authenticate}from"../../middlewares";const r=Router({mergeParams:true});r.use(authenticate);r.post("/",integrationController.create);r.get("/",integrationController.getByForm);r.delete("/:id",integrationController.delete);export default r;

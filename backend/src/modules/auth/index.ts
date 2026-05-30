@@ -1,0 +1,1 @@
+export{default as authRoutes}from"./auth.route";export{authService}from"./auth.service";

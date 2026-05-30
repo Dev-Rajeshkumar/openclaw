@@ -1,0 +1,1 @@
+import{Router}from"express";import{aiController}from"./ai.controller";import{authenticate}from"../../middlewares";const r=Router();r.use(authenticate);r.post("/generate-form",aiController.generateForm);r.post("/analyze",aiController.analyze);export default r;

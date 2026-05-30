@@ -1,0 +1,3 @@
+
+import{Request,Response}from"express";import{paymentService}from"./payment.service";import{catchAsync,sendSuccess}from"../../utils";import{AuthenticatedRequest}from"../../types";import{prisma}from"../../config";
+export const paymentController={createCheckout:catchAsync(async(req:Request,res:Response)=>{sendSuccess(res,await paymentService.createCheckoutSession(req.params.formId,(req as AuthenticatedRequest).user!.id,req.body));}),webhook:catchAsync(async(req:Request,res:Response)=>{await paymentService.handleWebhook(req.body,req.headers["stripe-signature"] as string);res.json({received:true});}),getByForm:catchAsync(async(req:Request,res:Response)=>{sendSuccess(res,await prisma.payment.findMany({where:{formId:req.params.formId}}));}),};

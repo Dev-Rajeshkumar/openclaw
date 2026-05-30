@@ -1,0 +1,1 @@
+export{default as paymentRoutes}from"./payment.route";export{paymentService}from"./payment.service";

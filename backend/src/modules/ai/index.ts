@@ -1,0 +1,1 @@
+export{default as aiRoutes}from"./ai.route";export{aiService}from"./ai.service";
