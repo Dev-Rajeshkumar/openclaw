@@ -11,11 +11,9 @@ This repo hosts multiple projects built with OpenClaw.
 
 ## Quick Start
 
-```bash
-git clone https://github.com/Dev-Rajeshkumar/openclaw.git
-cd openclaw
-git checkout <branch-name>
-```
+    git clone https://github.com/Dev-Rajeshkumar/openclaw.git
+    cd openclaw
+    git checkout <branch-name>
 
 ## Tech Stack
 
