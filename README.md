@@ -1,15 +1,15 @@
-# 🤖 OpenClaw Workspace
+# OpenClaw Workspace
 
-Welcome to my OpenClaw development workspace! This repo hosts multiple projects built with OpenClaw — an open-source AI agent framework.
+This repo hosts multiple projects built with OpenClaw.
 
-## 📂 Projects
+## Projects
 
 | Branch | Description | Stack |
 |--------|-------------|-------|
-| [`form-flow`](https://github.com/Dev-Rajeshkumar/openclaw/tree/form-flow) | AI-Powered Form Backend | Next.js 15, Express, Prisma, MongoDB |
-| [`reminder-bot`](https://github.com/Dev-Rajeshkumar/openclaw/tree/reminder-bot) | Telegram Reminder Bot — Birthdays & Events | Python, SQLite, APScheduler |
+| [form-flow](tree/form-flow) | AI-Powered Form Backend | Next.js 15, Express, Prisma, MongoDB |
+| [reminder-bot](tree/reminder-bot) | Telegram Reminder Bot | Python, SQLite, Telegram Bot API |
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 git clone https://github.com/Dev-Rajeshkumar/openclaw.git
@@ -17,18 +17,19 @@ cd openclaw
 git checkout <branch-name>
 ```
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Frontend:** Next.js 15, React, Tailwind CSS, TypeScript
-- **Backend:** Node.js, Express.js, NestJS
-- **Database:** MongoDB, PostgreSQL, SQLite
-- **AI:** OpenAI GPT-4o
-- **Payments:** Stripe
+- Frontend: Next.js 15, React, Tailwind CSS
+- Backend: Node.js, Express.js, NestJS
+- Database: MongoDB, PostgreSQL, SQLite
+- AI: OpenAI GPT-4o
+- Payments: Stripe
+- Bots: Telegram Bot API
 
-## 📝 About
+## About
 
-Built by [Rajeshkumar S](https://github.com/Dev-Rajeshkumar) with Maya ✨
+Built by Rajeshkumar S with help from Maya.
 
-## 📄 License
+## License
 
 MIT
