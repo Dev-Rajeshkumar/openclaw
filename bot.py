@@ -529,7 +529,10 @@ async def send_daily_reminders(context: ContextTypes.DEFAULT_TYPE):
 
 # ─── Main ──────────────────────────────────────────────────
 def main():
-    """Start the bot."""
+    """Start the bot with HTTP health check for Railway."""
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+
     logger.info("Starting ReminderBot...")
     init_db()
 
@@ -568,16 +571,25 @@ def main():
     )
     logger.info("Daily check scheduled at %s IST", CHECK_TIME)
 
-    logger.info("Bot running. Press Ctrl+C to stop.")
+    # Start HTTP health check server for Railway
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"ReminderBot is running!")
+        def log_message(self, format, *args):
+            pass  # Suppress request logs
+
+    port = int(os.getenv("PORT", "8080"))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    logger.info("Health check server started on port %s", port)
+
+    # Start bot polling (blocking)
+    logger.info("Bot polling started.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
-
-if __name__ == "__main__":
-    main()
-
-
-if __name__ == "__main__":
-    main()
-
 
 if __name__ == "__main__":
     main()
