@@ -1,0 +1,36 @@
+name: Reminder Bot Health Check
+
+on:
+  push:
+    branches: [reminder-bot]
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: reminder-bot
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "Dependencies installed"
+
+      - name: Check bot syntax
+        run: |
+          python -c 'import py_compile; py_compile.compile("bot.py", doraise=True)' && echo "Bot syntax OK"
+
+      - name: Verify imports
+        run: |
+          python -c 'import telegram; import apscheduler; import pytz; import sqlite3; print("All imports OK"); print("python-telegram-bot:", telegram.__version__)'
