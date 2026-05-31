@@ -1,0 +1,4 @@
+# Core dependencies for Reminder Bot
+python-telegram-bot==21.1.1
+APScheduler==3.10.4
+pytz==2024.1
