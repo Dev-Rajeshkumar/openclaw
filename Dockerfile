@@ -26,8 +26,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY bot.py .
 COPY .env.example .env
 
-# Data directory for SQLite (persist across deploys if using Railway volumes)
-VOLUME ["/app/data"]
 
 # Run the bot
 CMD ["python", "bot.py"]
