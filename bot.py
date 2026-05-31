@@ -13,7 +13,7 @@ import sqlite3
 import logging
 from datetime import datetime, timedelta
 import pytz
-from apscheduler.schedulers.background import BackgroundScheduler
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
@@ -21,7 +21,10 @@ from telegram.ext import (
 )
 
 # ─── Configuration ───────────────────────────────────────────
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+if not BOT_TOKEN:
+    logger.error("BOT_TOKEN environment variable not set! Exiting.")
+    raise SystemExit("BOT_TOKEN environment variable is required")
 DB_PATH = os.getenv("DB_PATH", "reminders.db")
 CHECK_TIME = os.getenv("CHECK_TIME", "09:00")
 IST = pytz.timezone("Asia/Kolkata")  # Indian Standard Time
@@ -527,6 +530,9 @@ async def send_daily_reminders(context: ContextTypes.DEFAULT_TYPE):
 # ─── Main ──────────────────────────────────────────────────
 def main():
     """Start the bot."""
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    
     logger.info("Starting ReminderBot...")
     init_db()
 
@@ -565,8 +571,29 @@ def main():
     )
     logger.info("Daily check scheduled at %s IST", CHECK_TIME)
 
-    logger.info("Bot running. Press Ctrl+C to stop.")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Start bot polling in a background thread
+    bot_thread = threading.Thread(target=lambda: app.run_polling(allowed_updates=Update.ALL_TYPES), daemon=True)
+    bot_thread.start()
+    logger.info("Bot polling started in background thread")
+
+    # Start HTTP health check server for Railway
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"ReminderBot is running!")
+        def log_message(self, format, *args):
+            pass  # Suppress HTTP request logs
+    
+    port = int(os.getenv("PORT", "8080"))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    logger.info("Health check server started on port %s", port)
+    server.serve_forever()
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()
