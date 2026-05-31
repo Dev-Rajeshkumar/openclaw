@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application code
 COPY bot.py .
-COPY .env.example .env
+COPY .env
 
 
 # Run the bot
