@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { invoiceController } from '../controllers/invoice.controller.js';
 import { validate } from '../middleware/validate.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireBusiness } from '../middleware/auth.js';
+import { autoActivityLogger } from '../middleware/activityLogger.js';
 import {
   createInvoiceSchema,
   updateInvoiceSchema,
@@ -11,19 +12,14 @@ import {
 } from '../validators/invoice.validator.js';
 
 const router = Router();
+router.use(authenticate, requireBusiness);
 
-// All routes require authentication
-router.use(authenticate);
-
-// Dashboard stats (must be before /:id routes)
-router.get(
-  '/dashboard/stats',
-  invoiceController.getDashboardStats.bind(invoiceController)
-);
+router.get('/dashboard/stats', invoiceController.getDashboardStats.bind(invoiceController));
 
 router.post(
   '/',
   validate(createInvoiceSchema),
+  autoActivityLogger,
   invoiceController.create.bind(invoiceController)
 );
 
@@ -42,18 +38,21 @@ router.get(
 router.put(
   '/:id',
   validate(updateInvoiceSchema),
+  autoActivityLogger,
   invoiceController.update.bind(invoiceController)
 );
 
 router.delete(
   '/:id',
   validate(getInvoiceSchema),
+  autoActivityLogger,
   invoiceController.delete.bind(invoiceController)
 );
 
 router.post(
   '/:id/payments',
   validate(recordPaymentSchema),
+  autoActivityLogger,
   invoiceController.recordPayment.bind(invoiceController)
 );
 

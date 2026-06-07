@@ -4,25 +4,22 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { config } from './config/index.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
+import { requestIdMiddleware } from './middleware/activityLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import routes from './routes/index.js';
+import { notificationService } from './services/notification.service.js';
 
 const app = express();
 
 // ==================== GLOBAL MIDDLEWARE ====================
 
-// Security
 app.use(helmet());
 app.use(cors({ origin: config.cors.origin, credentials: true }));
-
-// Rate limiting
 app.use(generalLimiter);
-
-// Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(requestIdMiddleware);
 
-// Logging
 if (config.nodeEnv !== 'test') {
   app.use(morgan(config.nodeEnv === 'development' ? 'dev' : 'combined'));
 }
@@ -61,6 +58,14 @@ if (config.nodeEnv !== 'test') {
     Health: http://localhost:${config.port}/health
     ==========================
     `);
+
+    // Send startup notification
+    notificationService.send({
+      title: 'BillingBee Server Started',
+      message: `Server is running in ${config.nodeEnv} mode on port ${config.port}`,
+      severity: 'info',
+      timestamp: new Date().toISOString(),
+    }).catch(() => {});
   });
 }
 

@@ -10,25 +10,47 @@ datasource db {
 // ==================== USER MODEL ====================
 
 model User {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  email          String   @unique
+  password       String?  // nullable for Google auth users
+  fullName       String
+  avatar         String?
+  googleId       String?  @unique
+  isEmailVerified Boolean @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  businesses     Business[]
+  activityLogs   ActivityLog[]
+
+  @@map("users")
+}
+
+// ==================== BUSINESS MODEL ====================
+
+model Business {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  email         String   @unique
-  password      String
-  fullName      String
-  businessName  String?
+  userId        String   @db.ObjectId
+  name          String
   gstNumber     String?
   phone         String?
   address       String?
+  logo          String?
+  invoicePrefix String   @default("BB")
+  nextInvoiceNo Int      @default(1)
   plan          String   @default("FREE")
-  invoiceCount  Int      @default(0)
-  clientCount   Int      @default(0)
+  deletedAt     DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   clients  Client[]
   invoices Invoice[]
-  payments Payment @@map("userpayments")
 
-  @@map("users")
+  @@index([userId])
+  @@index([userId, deletedAt])
+  @@map("businesses")
 }
 
 // ==================== CLIENT MODEL ====================
@@ -36,19 +58,23 @@ model User {
 model Client {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
+  businessId String  @db.ObjectId
   name      String
   email     String?
   phone     String?
   gstNumber String?
   address   String?
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   invoices Invoice[]
 
   @@index([userId])
-  @@index([name])
+  @@index([businessId])
+  @@index([businessId, deletedAt])
   @@map("clients")
 }
 
@@ -57,6 +83,7 @@ model Client {
 model Invoice {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   userId        String   @db.ObjectId
+  businessId    String   @db.ObjectId
   clientId      String?  @db.ObjectId
   invoiceNumber String
   invoiceDate   DateTime @default(now())
@@ -68,18 +95,25 @@ model Invoice {
   gstAmount     Float    @default(0)
   total         Float    @default(0)
   notes         String?
+  deletedAt     DateTime?
+  createdBy     String   @db.ObjectId
+  updatedBy     String   @db.ObjectId
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt     @updatedAt
 
   user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client   Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
   items    InvoiceItem[]
   payments Payment[]
+  statusLogs StatusLog[]
 
-  @@unique([userId, invoiceNumber])
+  @@unique([businessId, invoiceNumber])
   @@index([userId])
+  @@index([businessId])
+  @@index([businessId, status])
+  @@index([businessId, deletedAt])
   @@index([status])
-  @@index([invoiceDate])
   @@index([clientId])
   @@map("invoices")
 }
@@ -94,6 +128,7 @@ model InvoiceItem {
   quantity    Float    @default(1)
   rate        Float
   amount      Float
+  deletedAt   DateTime?
   createdAt   DateTime @default(now())
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -114,6 +149,7 @@ model Payment {
   status    String   @default("PENDING")
   notes     String?
   paidAt    DateTime?
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -123,4 +159,54 @@ model Payment {
   @@index([invoiceId])
   @@index([userId])
   @@map("payments")
+}
+
+// ==================== ACTIVITY LOG MODEL (for internal reference) ====================
+
+model ActivityLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  action      String   // e.g., "CREATE_INVOICE", "UPDATE_CLIENT", "DELETE_INVOICE"
+  entity      String   // e.g., "Invoice", "Client", "Business"
+  entityId    String?  @db.ObjectId
+  method      String   // HTTP method: GET, POST, PUT, DELETE
+  path        String   // API endpoint path
+  statusCode  Int?     // HTTP response status code
+  ip          String?
+  userAgent   String?
+  requestBody Json?    // sanitized request body
+  metadata    Json?    // any additional context
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("activitylogs")
+}
+
+// ==================== STATUS LOG MODEL (user-facing audit trail) ====================
+
+model StatusLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  entity      String   // e.g., "Invoice", "Client"
+  entityId    String   @db.ObjectId
+  action      String   // e.g., "CREATED", "STATUS_CHANGED", "UPDATED"
+  oldValue    String?  // previous value (e.g., old status)
+  newValue    String?  // new value (e.g., new status)
+  description String?  // human-readable description
+  changedBy   String   @db.ObjectId
+  metadata    Json?    // changes diff, etc.
+  createdAt   DateTime @default(now())
+
+  invoice Invoice? @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entity, entityId])
+  @@index([entityId])
+  @@index([changedBy])
+  @@index([createdAt])
+  @@map("statuslogs")
 }

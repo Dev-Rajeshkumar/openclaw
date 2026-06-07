@@ -1,20 +1,16 @@
 import { Request } from 'express';
-import { z } from 'zod';
 
 // ==================== USER TYPES ====================
 
 export interface IUser {
   id: string;
   email: string;
-  password: string;
+  password: string | null;
   fullName: string;
-  businessName: string | null;
-  gstNumber: string | null;
-  phone: string | null;
-  address: string | null;
-  plan: SubscriptionPlan;
-  invoiceCount: number;
-  clientCount: number;
+  avatar: string | null;
+  googleId: string | null;
+  isEmailVerified: boolean;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,11 +19,9 @@ export interface IUserPublic {
   id: string;
   email: string;
   fullName: string;
-  businessName: string | null;
-  gstNumber: string | null;
-  phone: string | null;
-  address: string | null;
-  plan: SubscriptionPlan;
+  avatar: string | null;
+  googleId: string | null;
+  isEmailVerified: boolean;
   createdAt: Date;
 }
 
@@ -49,16 +43,36 @@ export interface IPlanLimits {
   hasAnalytics: boolean;
 }
 
+// ==================== BUSINESS TYPES ====================
+
+export interface IBusiness {
+  id: string;
+  userId: string;
+  name: string;
+  gstNumber: string | null;
+  phone: string | null;
+  address: string | null;
+  logo: string | null;
+  invoicePrefix: string;
+  nextInvoiceNo: number;
+  plan: SubscriptionPlan;
+  deletedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ==================== CLIENT TYPES ====================
 
 export interface IClient {
   id: string;
   userId: string;
+  businessId: string;
   name: string;
   email: string | null;
   phone: string | null;
   gstNumber: string | null;
   address: string | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,12 +101,14 @@ export interface IInvoiceItem {
   quantity: number;
   rate: number;
   amount: number;
+  deletedAt: Date | null;
   createdAt: Date;
 }
 
 export interface IInvoice {
   id: string;
   userId: string;
+  businessId: string;
   clientId: string | null;
   invoiceNumber: string;
   invoiceDate: Date;
@@ -104,6 +120,9 @@ export interface IInvoice {
   gstAmount: number;
   total: number;
   notes: string | null;
+  deletedAt: Date | null;
+  createdBy: string;
+  updatedBy: string;
   items: IInvoiceItem[];
   createdAt: Date;
   updatedAt: Date;
@@ -128,8 +147,42 @@ export interface IPayment {
   status: PaymentStatus;
   notes: string | null;
   paidAt: Date | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// ==================== ACTIVITY LOG TYPES (internal) ====================
+
+export interface IActivityLog {
+  id: string;
+  userId: string;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  method: string;
+  path: string;
+  statusCode: number | null;
+  ip: string | null;
+  userAgent: string | null;
+  requestBody: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
+}
+
+// ==================== STATUS LOG TYPES (user-facing) ====================
+
+export interface IStatusLog {
+  id: string;
+  entity: string;
+  entityId: string;
+  action: string;
+  oldValue: string | null;
+  newValue: string | null;
+  description: string | null;
+  changedBy: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
 }
 
 // ==================== AUTH TYPES ====================
@@ -142,11 +195,12 @@ export interface IAuthTokens {
 export interface ITokenPayload {
   userId: string;
   email: string;
-  plan: SubscriptionPlan;
 }
 
 export interface IAuthRequest extends Request {
   user?: ITokenPayload;
+  businessId?: string;
+  requestId?: string;
 }
 
 // ==================== API RESPONSE TYPES ====================
@@ -156,21 +210,13 @@ export interface IApiResponse<T = unknown> {
   message: string;
   data?: T;
   error?: string;
+  requestId?: string;
   meta?: {
     page?: number;
     limit?: number;
     total?: number;
     totalPages?: number;
   };
-}
-
-// ==================== PAGINATION TYPES ====================
-
-export interface IPaginationParams {
-  page: number;
-  limit: number;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
 }
 
 // ==================== DASHBOARD TYPES ====================
