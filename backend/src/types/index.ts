@@ -1,232 +1,196 @@
 import { Request } from 'express';
 
-// ==================== USER TYPES ====================
-
-export interface IUser {
-  id: string;
-  email: string;
-  password: string | null;
-  fullName: string;
-  avatar: string | null;
-  googleId: string | null;
-  isEmailVerified: boolean;
-  deletedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+// Enums
+export enum Plan {
+  Free = 'Free',
+  Starter = 'Starter',
+  Professional = 'Professional',
+  Business = 'Business',
 }
 
-export interface IUserPublic {
-  id: string;
-  email: string;
-  fullName: string;
-  avatar: string | null;
-  googleId: string | null;
-  isEmailVerified: boolean;
-  createdAt: Date;
+export enum ClientStatus {
+  Active = 'Active',
+  Inactive = 'Inactive',
+  Archived = 'Archived',
 }
 
-// ==================== SUBSCRIPTION PLAN TYPES ====================
-
-export enum SubscriptionPlan {
-  FREE = 'FREE',
-  SILVER = 'SILVER',
-  GOLD = 'GOLD',
-  DIAMOND = 'DIAMOND',
-}
-
-export interface IPlanLimits {
-  maxInvoices: number;
-  maxClients: number;
-  canCustomizeInvoiceNumber: boolean;
-  canRemoveBranding: boolean;
-  hasPrioritySupport: boolean;
-  hasAnalytics: boolean;
-}
-
-// ==================== BUSINESS TYPES ====================
-
-export interface IBusiness {
-  id: string;
-  userId: string;
-  name: string;
-  gstNumber: string | null;
-  phone: string | null;
-  address: string | null;
-  logo: string | null;
-  invoicePrefix: string;
-  nextInvoiceNo: number;
-  plan: SubscriptionPlan;
-  deletedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// ==================== CLIENT TYPES ====================
-
-export interface IClient {
-  id: string;
-  userId: string;
-  businessId: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  gstNumber: string | null;
-  address: string | null;
-  deletedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// ==================== INVOICE TYPES ====================
-
-export enum GstType {
-  CGST_SGST = 'CGST_SGST',
-  IGST = 'IGST',
-  UTGST = 'UTGST',
+export enum EstimateStatus {
+  Draft = 'Draft',
+  Sent = 'Sent',
+  Accepted = 'Accepted',
+  Rejected = 'Rejected',
+  Expired = 'Expired',
 }
 
 export enum InvoiceStatus {
-  DRAFT = 'DRAFT',
-  SENT = 'SENT',
-  PAID = 'PAID',
-  OVERDUE = 'OVERDUE',
-  CANCELLED = 'CANCELLED',
+  Draft = 'Draft',
+  Sent = 'Sent',
+  Viewed = 'Viewed',
+  PartiallyPaid = 'PartiallyPaid',
+  Paid = 'Paid',
+  Overdue = 'Overdue',
+  Cancelled = 'Cancelled',
 }
 
-export interface IInvoiceItem {
-  id: string;
-  invoiceId: string;
-  description: string;
-  hsnCode: string;
-  quantity: number;
-  rate: number;
-  amount: number;
-  deletedAt: Date | null;
-  createdAt: Date;
+export enum InvoiceItemType {
+  Product = 'Product',
+  Service = 'Service',
+  Custom = 'Custom',
 }
 
-export interface IInvoice {
-  id: string;
-  userId: string;
-  businessId: string;
-  clientId: string | null;
-  invoiceNumber: string;
-  invoiceDate: Date;
-  dueDate: Date | null;
-  status: InvoiceStatus;
-  gstType: GstType;
-  subtotal: number;
-  gstRate: number;
-  gstAmount: number;
-  total: number;
-  notes: string | null;
-  deletedAt: Date | null;
-  createdBy: string;
-  updatedBy: string;
-  items: IInvoiceItem[];
-  createdAt: Date;
-  updatedAt: Date;
+export enum RecurringFrequency {
+  Daily = 'Daily',
+  Weekly = 'Weekly',
+  Monthly = 'Monthly',
+  Quarterly = 'Quarterly',
+  Yearly = 'Yearly',
 }
 
-// ==================== PAYMENT TYPES ====================
+export enum PaymentMethod {
+  Cash = 'Cash',
+  BankTransfer = 'BankTransfer',
+  UPI = 'UPI',
+  Card = 'Card',
+  Cheque = 'Cheque',
+  Online = 'Online',
+  Other = 'Other',
+}
 
 export enum PaymentStatus {
-  PENDING = 'PENDING',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED',
+  Pending = 'Pending',
+  Completed = 'Completed',
+  Failed = 'Failed',
+  Refunded = 'Refunded',
 }
 
-export interface IPayment {
-  id: string;
-  invoiceId: string;
-  userId: string;
-  amount: number;
-  method: string | null;
-  reference: string | null;
-  status: PaymentStatus;
-  notes: string | null;
-  paidAt: Date | null;
-  deletedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+export enum TeamRole {
+  Owner = 'Owner',
+  Admin = 'Admin',
+  Accountant = 'Accountant',
+  Manager = 'Manager',
+  Employee = 'Employee',
+  Viewer = 'Viewer',
 }
 
-// ==================== ACTIVITY LOG TYPES (internal) ====================
-
-export interface IActivityLog {
-  id: string;
-  userId: string;
-  action: string;
-  entity: string;
-  entityId: string | null;
-  method: string;
-  path: string;
-  statusCode: number | null;
-  ip: string | null;
-  userAgent: string | null;
-  requestBody: Record<string, unknown> | null;
-  metadata: Record<string, unknown> | null;
-  createdAt: Date;
+export enum InvitationStatus {
+  Pending = 'Pending',
+  Accepted = 'Accepted',
+  Rejected = 'Rejected',
+  Expired = 'Expired',
 }
 
-// ==================== STATUS LOG TYPES (user-facing) ====================
-
-export interface IStatusLog {
-  id: string;
-  entity: string;
-  entityId: string;
-  action: string;
-  oldValue: string | null;
-  newValue: string | null;
-  description: string | null;
-  changedBy: string;
-  metadata: Record<string, unknown> | null;
-  createdAt: Date;
+export enum NotificationType {
+  Invoice = 'Invoice',
+  Payment = 'Payment',
+  System = 'System',
+  Reminder = 'Reminder',
 }
 
-// ==================== AUTH TYPES ====================
-
-export interface IAuthTokens {
-  accessToken: string;
-  refreshToken: string;
+export enum SubscriptionStatus {
+  Active = 'Active',
+  Inactive = 'Inactive',
+  Cancelled = 'Cancelled',
+  PastDue = 'PastDue',
 }
 
-export interface ITokenPayload {
+// Interfaces
+export interface JwtPayload {
   userId: string;
   email: string;
+  plan: Plan;
 }
 
-export interface IAuthRequest extends Request {
-  user?: ITokenPayload;
+export interface AuthenticatedRequest extends Request {
+  user?: JwtPayload;
   businessId?: string;
-  requestId?: string;
 }
 
-// ==================== API RESPONSE TYPES ====================
+export interface PaginationParams {
+  page: number;
+  limit: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
 
-export interface IApiResponse<T = unknown> {
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
   error?: string;
-  requestId?: string;
-  meta?: {
-    page?: number;
-    limit?: number;
-    total?: number;
-    totalPages?: number;
-  };
+  errors?: Record<string, string[]>;
 }
 
-// ==================== DASHBOARD TYPES ====================
+export interface EstimateItem {
+  type: InvoiceItemType;
+  description: string;
+  hsnCode?: string;
+  quantity: number;
+  rate: number;
+  discount: number;
+  taxRate: number;
+  amount: number;
+}
 
-export interface IDashboardStats {
-  totalInvoices: number;
-  paidInvoices: number;
-  pendingInvoices: number;
-  overdueInvoices: number;
-  totalRevenue: number;
-  pendingAmount: number;
-  recentInvoices: IInvoice[];
+export interface InvoiceItem {
+  type: InvoiceItemType;
+  description: string;
+  hsnCode?: string;
+  quantity: number;
+  rate: number;
+  discount: number;
+  taxRate: number;
+  amount: number;
+}
+
+export interface RecurringTemplate {
+  title: string;
+  items: InvoiceItem[];
+  notes?: string;
+  terms?: string;
+  taxAmount?: number;
+  discountAmount?: number;
+}
+
+export interface PlanLimits {
+  maxBusinesses: number;
+  maxClients: number;
+  maxInvoicesPerMonth: number;
+  maxTeamMembers: number;
+  maxStorageMB: number;
+  canExportPDF: boolean;
+  canSendEmail: boolean;
+  canUseRecurring: boolean;
+  canUseCustomBranding: boolean;
+  canUseAPI: boolean;
+  canUseReports: boolean;
+}
+
+export interface DiscordEmbed {
+  title: string;
+  description: string;
+  color: number;
+  fields?: { name: string; value: string; inline?: boolean }[];
+  timestamp?: string;
+}
+
+export interface FilterOptions {
+  search?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  clientId?: string;
+  category?: string;
+  tags?: string[];
 }

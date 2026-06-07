@@ -1,14 +1,13 @@
 import { Router } from 'express';
-import { authController } from '../controllers/auth.controller.js';
+import * as authController from '../controllers/auth.controller.js';
 import { validate } from '../middleware/validate.js';
-import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
-import { autoActivityLogger } from '../middleware/activityLogger.js';
+import { auth } from '../middleware/auth.js';
 import {
   registerSchema,
   loginSchema,
   googleAuthSchema,
-  refreshTokenSchema,
+  forgotPasswordSchema,
 } from '../validators/auth.validator.js';
 
 const router = Router();
@@ -17,36 +16,30 @@ router.post(
   '/register',
   authLimiter,
   validate(registerSchema),
-  autoActivityLogger,
-  authController.register.bind(authController)
+  authController.register
 );
 
 router.post(
   '/login',
   authLimiter,
   validate(loginSchema),
-  autoActivityLogger,
-  authController.login.bind(authController)
+  authController.login
 );
 
 router.post(
   '/google',
   authLimiter,
   validate(googleAuthSchema),
-  autoActivityLogger,
-  authController.googleAuth.bind(authController)
+  authController.googleAuth
 );
 
 router.post(
-  '/refresh',
-  validate(refreshTokenSchema),
-  authController.refreshToken.bind(authController)
+  '/forgot-password',
+  authLimiter,
+  validate(forgotPasswordSchema),
+  authController.forgotPassword
 );
 
-router.get(
-  '/me',
-  authenticate,
-  authController.me.bind(authController)
-);
+router.get('/me', auth, authController.getMe);
 
 export default router;

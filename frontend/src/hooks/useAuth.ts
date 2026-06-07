@@ -1,33 +1,32 @@
-'use client';
-
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { IUser, IAuthTokens, IAuthResponse, IBusiness } from '@/types';
-import api, { setTokens, clearTokens, getTokens, setBusinessId, getBusinessId } from '@/lib/api';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { User, Business } from "@/types";
+import {
+  setTokens,
+  clearTokens as clearApiTokens,
+  setActiveBusiness,
+  getActiveBusiness,
+} from "@/lib/api";
 
 interface AuthState {
-  user: IUser | null;
-  businesses: IBusiness[];
-  activeBusiness: IBusiness | null;
+  user: User | null;
+  businesses: Business[];
+  activeBusiness: Business | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: {
-    email: string;
-    password: string;
-    fullName: string;
-    businessName?: string;
-    phone?: string;
-  }) => Promise<void>;
-  googleLogin: (idToken: string) => Promise<void>;
+  isHydrated: boolean;
+
+  // Actions
+  setUser: (user: User | null) => void;
+  setBusinesses: (businesses: Business[]) => void;
+  setActiveBusinessById: (businessId: string) => void;
+  login: (user: User, accessToken: string, refreshToken: string, businesses?: Business[]) => void;
   logout: () => void;
-  fetchProfile: () => Promise<void>;
-  fetchBusinesses: () => Promise<void>;
-  setActiveBusiness: (business: IBusiness) => void;
-  updateUser: (user: Partial<IUser>) => void;
+  setLoading: (loading: boolean) => void;
+  setHydrated: (hydrated: boolean) => void;
 }
 
-export const useAuth = create<AuthState>()(
+export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
@@ -35,112 +34,102 @@ export const useAuth = create<AuthState>()(
       activeBusiness: null,
       isAuthenticated: false,
       isLoading: false,
+      isHydrated: false,
 
-      login: async (email, password) => {
-        set({ isLoading: true });
-        try {
-          const { data } = await api.post('/auth/login', { email, password });
-          if (data.success && data.data) {
-            const { user, tokens } = data.data as IAuthResponse;
-            setTokens(tokens);
-            set({ user, isAuthenticated: true, isLoading: false });
-            // Fetch businesses after login
-            await get().fetchBusinesses();
-          }
-        } catch (error) {
-          set({ isLoading: false });
-          throw error;
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
+
+      setBusinesses: (businesses) => {
+        const currentActive = get().activeBusiness;
+        const storedId = getActiveBusiness();
+
+        let activeBusiness = null;
+        if (currentActive) {
+          activeBusiness = businesses.find((b) => b.id === currentActive.id) || null;
+        }
+        if (!activeBusiness && storedId) {
+          activeBusiness = businesses.find((b) => b.id === storedId) || null;
+        }
+        if (!activeBusiness && businesses.length > 0) {
+          activeBusiness = businesses[0];
+          setActiveBusiness(businesses[0].id);
+        }
+
+        set({ businesses, activeBusiness });
+      },
+
+      setActiveBusinessById: (businessId) => {
+        const business = get().businesses.find((b) => b.id === businessId);
+        if (business) {
+          setActiveBusiness(businessId);
+          set({ activeBusiness: business });
         }
       },
 
-      register: async (formData) => {
-        set({ isLoading: true });
-        try {
-          const { data } = await api.post('/auth/register', formData);
-          if (data.success && data.data) {
-            const { user, tokens } = data.data as IAuthResponse;
-            setTokens(tokens);
-            set({ user, isAuthenticated: true, isLoading: false });
-            await get().fetchBusinesses();
-          }
-        } catch (error) {
-          set({ isLoading: false });
-          throw error;
-        }
-      },
+      login: (user, accessToken, refreshToken, businesses = []) => {
+        setTokens(accessToken, refreshToken);
 
-      googleLogin: async (idToken) => {
-        set({ isLoading: true });
-        try {
-          const { data } = await api.post('/auth/google', { idToken });
-          if (data.success && data.data) {
-            const { user, tokens } = data.data as IAuthResponse;
-            setTokens(tokens);
-            set({ user, isAuthenticated: true, isLoading: false });
-            await get().fetchBusinesses();
-          }
-        } catch (error) {
-          set({ isLoading: false });
-          throw error;
+        const storedId = getActiveBusiness();
+        let activeBusiness = null;
+        if (storedId) {
+          activeBusiness = businesses.find((b) => b.id === storedId) || null;
         }
+        if (!activeBusiness && businesses.length > 0) {
+          activeBusiness = businesses[0];
+          setActiveBusiness(businesses[0].id);
+        }
+
+        set({
+          user,
+          isAuthenticated: true,
+          businesses,
+          activeBusiness,
+        });
       },
 
       logout: () => {
-        clearTokens();
-        set({ user: null, businesses: [], activeBusiness: null, isAuthenticated: false });
+        clearApiTokens();
+        set({
+          user: null,
+          isAuthenticated: false,
+          businesses: [],
+          activeBusiness: null,
+        });
       },
 
-      fetchProfile: async () => {
-        const tokens = getTokens();
-        if (!tokens) {
-          set({ isAuthenticated: false, user: null });
-          return;
-        }
-        try {
-          const { data } = await api.get('/auth/me');
-          if (data.success && data.data) {
-            set({ user: data.data as IUser, isAuthenticated: true });
-          }
-        } catch {
-          clearTokens();
-          set({ user: null, isAuthenticated: false });
-        }
-      },
-
-      fetchBusinesses: async () => {
-        try {
-          const { data } = await api.get('/businesses');
-          if (data.success && data.data) {
-            const businesses = data.data as IBusiness[];
-            // Check if saved businessId is still valid
-            const savedBusinessId = getBusinessId();
-            const savedBusiness = businesses.find((b) => b.id === savedBusinessId);
-            const activeBusiness = savedBusiness || businesses[0] || null;
-            if (activeBusiness) {
-              setBusinessId(activeBusiness.id);
-            }
-            set({ businesses, activeBusiness });
-          }
-        } catch (error) {
-          console.error('Failed to fetch businesses:', error);
-        }
-      },
-
-      setActiveBusiness: (business) => {
-        setBusinessId(business.id);
-        set({ activeBusiness: business });
-      },
-
-      updateUser: (updates) => {
-        const currentUser = get().user;
-        if (currentUser) {
-          set({ user: { ...currentUser, ...updates } });
-        }
-      },
+      setLoading: (isLoading) => set({ isLoading }),
+      setHydrated: (isHydrated) => set({ isHydrated }),
     }),
     {
-      name: 'bb-auth',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      name: "auth-storage",
+      partialize: (state) => ({
+        user: state.user,
+        businesses: state.businesses,
+        activeBusiness: state.activeBusiness,
+        isAuthenticated: state.isAuthenticated,
+      }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true);
+      },
     }
   )
 );
+
+// Hook for auth actions that need API calls
+export function useAuth() {
+  const store = useAuthStore();
+
+  return {
+    user: store.user,
+    businesses: store.businesses,
+    activeBusiness: store.activeBusiness,
+    isAuthenticated: store.isAuthenticated,
+    isLoading: store.isLoading,
+    isHydrated: store.isHydrated,
+    login: store.login,
+    logout: store.logout,
+    setUser: store.setUser,
+    setBusinesses: store.setBusinesses,
+    setActiveBusinessById: store.setActiveBusinessById,
+    setLoading: store.setLoading,
+  };
+}

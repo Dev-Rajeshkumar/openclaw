@@ -1,103 +1,142 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-/**
- * Merge Tailwind CSS classes without conflicts
- */
-export function cn(...inputs: ClassValue[]): string {
+export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/**
- * Format currency in Indian style
- */
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
+export function formatCurrency(
+  amount: number,
+  currency: string = "USD",
+  locale: string = "en-US"
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
 }
 
-/**
- * Format date in Indian style
- */
-export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(date));
+export function formatDate(
+  date: string | Date,
+  options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }
+): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-US", options).format(d);
 }
 
-/**
- * Format date with time
- */
-export function formatDateTime(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date));
+export function formatRelativeDate(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return `${Math.floor(diffDays / 365)} years ago`;
 }
 
-/**
- * Get status color class
- */
+export function formatNumber(value: number): string {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
+export function formatPercent(value: number, decimals: number = 1): string {
+  return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}%`;
+}
+
+export function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+export function truncate(str: string, length: number): string {
+  if (str.length <= length) return str;
+  return str.slice(0, length) + "…";
+}
+
+export function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function generateInvoiceNumber(prefix: string, number: number): string {
+  return `${prefix}${String(number).padStart(4, "0")}`;
+}
+
+export function calculateLineItemTotal(
+  quantity: number,
+  unitPrice: number,
+  taxRate: number
+): { subtotal: number; taxAmount: number; total: number } {
+  const subtotal = quantity * unitPrice;
+  const taxAmount = subtotal * (taxRate / 100);
+  const total = subtotal + taxAmount;
+  return { subtotal, taxAmount, total };
+}
+
+export function calculateInvoiceTotals(
+  lineItems: { quantity: number; unitPrice: number; taxRate: number }[],
+  discountType?: "percentage" | "fixed",
+  discountValue: number = 0
+): {
+  subtotal: number;
+  taxTotal: number;
+  discountAmount: number;
+  total: number;
+} {
+  const subtotal = lineItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0
+  );
+  const taxTotal = lineItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice * (item.taxRate / 100),
+    0
+  );
+  const discountAmount =
+    discountType === "percentage"
+      ? (subtotal + taxTotal) * (discountValue / 100)
+      : discountType === "fixed"
+        ? discountValue
+        : 0;
+  const total = subtotal + taxTotal - discountAmount;
+  return { subtotal, taxTotal, discountAmount, total: Math.max(0, total) }
+}
+
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    DRAFT: 'bg-gray-100 text-gray-700',
-    SENT: 'bg-blue-100 text-blue-700',
-    PAID: 'bg-green-100 text-green-700',
-    OVERDUE: 'bg-red-100 text-red-700',
-    CANCELLED: 'bg-gray-100 text-gray-500',
-    PENDING: 'bg-yellow-100 text-yellow-700',
-    COMPLETED: 'bg-green-100 text-green-700',
+    draft: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+    sent: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    viewed:
+      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+    paid: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    partial:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    overdue: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+    cancelled:
+      "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+    refunded:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
   };
-  return colors[status] || 'bg-gray-100 text-gray-700';
+  return colors[status] || colors.draft;
 }
 
-/**
- * Get plan color class
- */
-export function getPlanColor(plan: string): string {
-  const colors: Record<string, string> = {
-    FREE: 'bg-gray-100 text-gray-700',
-    SILVER: 'bg-slate-100 text-slate-700',
-    GOLD: 'bg-amber-100 text-amber-700',
-    DIAMOND: 'bg-purple-100 text-purple-700',
-  };
-  return colors[plan] || 'bg-gray-100 text-gray-700';
-}
-
-/**
- * Truncate text
- */
-export function truncate(text: string, length: number): string {
-  if (text.length <= length) return text;
-  return text.substring(0, length) + '...';
-}
-
-/**
- * Generate random ID (for form keys, etc.)
- */
-export function generateId(): string {
-  return Math.random().toString(36).substring(2, 9);
-}
-
-/**
- * Debounce function
- */
-export function debounce<T extends (...args: unknown[]) => void>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
+export function isOverdue(dueDate: string, status: string): boolean {
+  if (status === "paid" || status === "cancelled") return false;
+  return new Date(dueDate) < new Date();
 }

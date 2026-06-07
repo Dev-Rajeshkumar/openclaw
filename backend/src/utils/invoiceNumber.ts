@@ -1,45 +1,68 @@
-import { PrismaClient } from '@prisma/client';
-import { kebabCase } from 'lodash';
-
-const prisma = new PrismaClient();
+/**
+ * Invoice number generation utilities
+ */
 
 /**
- * Generate next invoice number for a user
- * Format: BB-00001 (auto-incrementing)
+ * Generate a unique invoice number with prefix and sequence
+ * Format: {PREFIX}-{padding}{number}  e.g. INV-00001
  */
-export const generateInvoiceNumber = async (userId: string): Promise<string> => {
-  const lastInvoice = await prisma.invoice.findFirst({
-    where: { userId },
-    orderBy: { createdAt: 'desc' },
-    select: { invoiceNumber: true },
-  });
-
-  if (!lastInvoice) {
-    return 'BB-00001';
-  }
-
-  // Extract numeric part
-  const match = lastInvoice.invoiceNumber.match(/(\d+)$/);
-  if (!match) {
-    return 'BB-00001';
-  }
-
-  const nextNum = parseInt(match[1], 10) + 1;
-  return `BB-${String(nextNum).padStart(5, '0')}`;
-};
+export function generateInvoiceNumber(
+  prefix: string,
+  sequence: number,
+  padding: number = 5
+): string {
+  const padded = String(sequence).padStart(padding, '0');
+  return `${prefix}-${padded}`;
+}
 
 /**
- * Generate custom invoice number prefix based on business name
+ * Generate a unique estimate number
+ * Format: EST-{padding}{number}  e.g. EST-00001
  */
-export const generatePrefix = (businessName: string | null): string => {
-  if (!businessName) return 'BB';
-  const prefix = kebabCase(businessName).substring(0, 3).toUpperCase();
-  return prefix || 'BB';
-};
+export function generateEstimateNumber(sequence: number, padding: number = 5): string {
+  const padded = String(sequence).padStart(padding, '0');
+  return `EST-${padded}`;
+}
 
 /**
- * Validate invoice number format
+ * Parse an invoice number to extract prefix and sequence
  */
-export const isValidInvoiceNumber = (invoiceNumber: string): boolean => {
-  return /^[A-Z]{2,5}-\d{3,10}$/.test(invoiceNumber);
-};
+export function parseInvoiceNumber(invoiceNumber: string): {
+  prefix: string;
+  sequence: number;
+} | null {
+  const match = invoiceNumber.match(/^(.+)-(\d+)$/);
+  if (!match) return null;
+  return {
+    prefix: match[1],
+    sequence: parseInt(match[2], 10),
+  };
+}
+
+/**
+ * Generate a payment receipt number
+ */
+export function generateReceiptNumber(sequence: number): string {
+  return `RCP-${String(sequence).padStart(6, '0')}`;
+}
+
+/**
+ * Generate a proforma invoice number
+ */
+export function generateProformaNumber(sequence: number): string {
+  return `PRO-${String(sequence).padStart(5, '0')}`;
+}
+
+/**
+ * Generate a credit note number
+ */
+export function generateCreditNoteNumber(sequence: number): string {
+  return `CN-${String(sequence).padStart(5, '0')}`;
+}
+
+/**
+ * Generate a debit note number
+ */
+export function generateDebitNoteNumber(sequence: number): string {
+  return `DN-${String(sequence).padStart(5, '0')}`;
+}

@@ -1,59 +1,27 @@
 import { Router } from 'express';
-import { invoiceController } from '../controllers/invoice.controller.js';
+import * as invoiceController from '../controllers/invoice.controller.js';
+import { auth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { authenticate, requireBusiness } from '../middleware/auth.js';
-import { autoActivityLogger } from '../middleware/activityLogger.js';
 import {
   createInvoiceSchema,
   updateInvoiceSchema,
-  getInvoiceSchema,
-  listInvoicesSchema,
-  recordPaymentSchema,
+  updateInvoiceStatusSchema,
 } from '../validators/invoice.validator.js';
 
-const router = Router();
-router.use(authenticate, requireBusiness);
+const router = Router({ mergeParams: true });
 
-router.get('/dashboard/stats', invoiceController.getDashboardStats.bind(invoiceController));
+router.use(auth);
 
-router.post(
-  '/',
-  validate(createInvoiceSchema),
-  autoActivityLogger,
-  invoiceController.create.bind(invoiceController)
+router.post('/', validate(createInvoiceSchema), invoiceController.create);
+router.get('/', invoiceController.getAll);
+router.get('/stats', invoiceController.getStats);
+router.get('/:id', invoiceController.getById);
+router.put('/:id', validate(updateInvoiceSchema), invoiceController.update);
+router.patch(
+  '/:id/status',
+  validate(updateInvoiceStatusSchema),
+  invoiceController.updateStatus
 );
-
-router.get(
-  '/',
-  validate(listInvoicesSchema),
-  invoiceController.list.bind(invoiceController)
-);
-
-router.get(
-  '/:id',
-  validate(getInvoiceSchema),
-  invoiceController.getById.bind(invoiceController)
-);
-
-router.put(
-  '/:id',
-  validate(updateInvoiceSchema),
-  autoActivityLogger,
-  invoiceController.update.bind(invoiceController)
-);
-
-router.delete(
-  '/:id',
-  validate(getInvoiceSchema),
-  autoActivityLogger,
-  invoiceController.delete.bind(invoiceController)
-);
-
-router.post(
-  '/:id/payments',
-  validate(recordPaymentSchema),
-  autoActivityLogger,
-  invoiceController.recordPayment.bind(invoiceController)
-);
+router.delete('/:id', invoiceController.remove);
 
 export default router;

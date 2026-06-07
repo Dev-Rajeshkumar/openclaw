@@ -1,57 +1,96 @@
 import { Response, NextFunction } from 'express';
-import { clientService } from '../services/client.service.js';
-import { sendSuccess, sendPaginated } from '../utils/response.js';
-import { IAuthRequest, IApiResponse } from '../types/index.js';
-import { CreateClientInput, UpdateClientInput, ListClientsQuery } from '../validators/client.validator.js';
+import * as clientService from '../services/client.service.js';
+import { AuthenticatedRequest } from '../types/index.js';
+import { ApiResponse } from '../utils/response.js';
 
-export class ClientController {
-  async create(req: IAuthRequest, res: Response<IApiResponse>, next: NextFunction) {
-    try {
-      const result = await clientService.create(
-        req.user!.userId,
-        req.businessId!,
-        (req.business?.plan || 'FREE') as any,
-        req.body as CreateClientInput
-      );
-      sendSuccess(res, result, 'Client created successfully', 201);
-    } catch (error) { next(error); }
+export const create = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { businessId } = req.params;
+    const client = await clientService.createClient(userId, businessId, req.body);
+    res.status(201).json(ApiResponse.created(client, 'Client created successfully'));
+  } catch (error) {
+    next(error);
   }
+};
 
-  async list(req: IAuthRequest, res: Response<IApiResponse>, next: NextFunction) {
-    try {
-      const { clients, total, page, limit } = await clientService.list(
-        req.businessId!,
-        req.query as unknown as ListClientsQuery
-      );
-      sendPaginated(res, clients, total, page, limit, 'Clients fetched successfully');
-    } catch (error) { next(error); }
+export const getAll = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { businessId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+
+    const result = await clientService.getClients(
+      userId,
+      businessId,
+      page,
+      limit,
+      search,
+      status
+    );
+    res.status(200).json(ApiResponse.paginated(
+      result.clients,
+      result.page,
+      result.limit,
+      result.total
+    ));
+  } catch (error) {
+    next(error);
   }
+};
 
-  async getById(req: IAuthRequest, res: Response<IApiResponse>, next: NextFunction) {
-    try {
-      const result = await clientService.getById(req.user!.userId, req.businessId!, req.params.id);
-      sendSuccess(res, result, 'Client fetched successfully');
-    } catch (error) { next(error); }
+export const getById = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+    const client = await clientService.getClientById(id, userId);
+    res.status(200).json(ApiResponse.success(client));
+  } catch (error) {
+    next(error);
   }
+};
 
-  async update(req: IAuthRequest, res: Response<IApiResponse>, next: NextFunction) {
-    try {
-      const result = await clientService.update(
-        req.user!.userId,
-        req.businessId!,
-        req.params.id,
-        req.body as UpdateClientInput
-      );
-      sendSuccess(res, result, 'Client updated successfully');
-    } catch (error) { next(error); }
+export const update = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+    const client = await clientService.updateClient(id, userId, req.body);
+    res.status(200).json(ApiResponse.success(client, 'Client updated successfully'));
+  } catch (error) {
+    next(error);
   }
+};
 
-  async delete(req: IAuthRequest, res: Response<IApiResponse>, next: NextFunction) {
-    try {
-      const result = await clientService.softDelete(req.user!.userId, req.businessId!, req.params.id);
-      sendSuccess(res, result);
-    } catch (error) { next(error); }
+export const remove = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+    const result = await clientService.deleteClient(id, userId);
+    res.status(200).json(ApiResponse.success(result));
+  } catch (error) {
+    next(error);
   }
-}
-
-export const clientController = new ClientController();
+};

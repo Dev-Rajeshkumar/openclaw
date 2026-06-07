@@ -4,209 +4,483 @@ generator client {
 
 datasource db {
   provider = "mongodb"
-  url      = env("MONGODB_URI")
+  url      = env("DATABASE_URL")
 }
 
-// ==================== USER MODEL ====================
-
 model User {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  email          String   @unique
-  password       String?  // nullable for Google auth users
-  fullName       String
-  avatar         String?
-  googleId       String?  @unique
-  isEmailVerified Boolean @default(false)
-  deletedAt      DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  email           String    @unique
+  password        String?
+  fullName        String
+  avatar          String?
+  googleId        String?   @unique
+  isEmailVerified Boolean   @default(false)
+  phone           String?
+  currency        String    @default("INR")
+  language        String    @default("en")
+  timezone        String    @default("Asia/Kolkata")
+  plan            Plan      @default(Free)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  businesses     Business[]
-  activityLogs   ActivityLog[]
+  businesses       Business[]
+  clients          Client[]
+  products         Product[]
+  services         Service[]
+  estimates        Estimate[]
+  invoices         Invoice[]
+  recurringInvoices RecurringInvoice[]
+  payments         Payment[]
+  expenses         Expense[]
+  activityLogs     ActivityLog[]
+  statusLogs       StatusLog[]    @relation("StatusLogChangedBy")
+  teamMemberships  TeamMember[]
+  invitationsSent  Invitation[]    @relation("InvitationInvitedBy")
+  files            File[]
+  notifications    Notification[]
+  subscription     Subscription?
 
   @@map("users")
 }
 
-// ==================== BUSINESS MODEL ====================
-
 model Business {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String   @db.ObjectId
-  name          String
-  gstNumber     String?
-  phone         String?
-  address       String?
-  logo          String?
-  invoicePrefix String   @default("BB")
-  nextInvoiceNo Int      @default(1)
-  plan          String   @default("FREE")
-  deletedAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String    @db.ObjectId
+  name           String
+  gstNumber      String?
+  pan            String?
+  phone          String?
+  address        String?
+  logo           String?
+  invoicePrefix  String    @default("INV")
+  nextInvoiceNo  Int       @default(1)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clients  Client[]
-  invoices Invoice[]
+  user            User      @relation(fields: [userId], references: [id])
+  clients         Client[]
+  products        Product[]
+  services        Service[]
+  estimates       Estimate[]
+  invoices        Invoice[]
+  recurringInvoices RecurringInvoice[]
+  expenses        Expense[]
+  teamMembers     TeamMember[]
+  invitations     Invitation[]
+  files           File[]
 
-  @@index([userId])
-  @@index([userId, deletedAt])
   @@map("businesses")
 }
 
-// ==================== CLIENT MODEL ====================
-
 model Client {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
-  businessId String  @db.ObjectId
-  name      String
-  email     String?
-  phone     String?
-  gstNumber String?
-  address   String?
-  deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String      @db.ObjectId
+  businessId       String      @db.ObjectId
+  name             String
+  company          String?
+  email            String?
+  phone            String?
+  gstNumber        String?
+  pan              String?
+  billingAddress   String?
+  shippingAddress  String?
+  notes            String?
+  tags             String[]
+  status           ClientStatus @default(Active)
+  deletedAt        DateTime?
+  createdBy        String      @db.ObjectId
+  updatedAt        DateTime    @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  invoices Invoice[]
+  user      User      @relation(fields: [userId], references: [id])
+  business  Business  @relation(fields: [businessId], references: [id])
+  estimates Estimate[]
+  invoices  Invoice[]
+  recurringInvoices RecurringInvoice[]
 
-  @@index([userId])
-  @@index([businessId])
-  @@index([businessId, deletedAt])
   @@map("clients")
 }
 
-// ==================== INVOICE MODEL ====================
+model Product {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  businessId  String    @db.ObjectId
+  name        String
+  sku         String?
+  hsnCode     String?
+  description String?
+  unitPrice   Float
+  taxRate     Float     @default(0)
+  category    String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@map("products")
+}
+
+model Service {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  businessId  String    @db.ObjectId
+  name        String
+  description String?
+  hourlyRate  Float?
+  fixedRate   Float?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@map("services")
+}
+
+model Estimate {
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String          @db.ObjectId
+  businessId     String          @db.ObjectId
+  clientId       String          @db.ObjectId
+  estimateNumber String
+  title          String
+  items          Json
+  subtotal       Float
+  taxAmount      Float           @default(0)
+  total          Float
+  status         EstimateStatus  @default(Draft)
+  expiryDate     DateTime?
+  notes          String?
+  terms          String?
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+  client   Client   @relation(fields: [clientId], references: [id])
+
+  @@map("estimates")
+}
 
 model Invoice {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String   @db.ObjectId
-  businessId    String   @db.ObjectId
-  clientId      String?  @db.ObjectId
-  invoiceNumber String
-  invoiceDate   DateTime @default(now())
-  dueDate       DateTime?
-  status        String   @default("DRAFT")
-  gstType       String   @default("CGST_SGST")
-  gstRate       Float    @default(18)
-  subtotal      Float    @default(0)
-  gstAmount     Float    @default(0)
-  total         Float    @default(0)
-  notes         String?
-  deletedAt     DateTime?
-  createdBy     String   @db.ObjectId
-  updatedBy     String   @db.ObjectId
-  createdAt     DateTime @default(now())
-  updatedAt     @updatedAt
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String          @db.ObjectId
+  businessId     String          @db.ObjectId
+  clientId       String?         @db.ObjectId
+  recurringId    String?         @db.ObjectId
+  invoiceNumber  String
+  invoiceDate    DateTime        @default(now())
+  dueDate        DateTime
+  items          Json
+  subtotal       Float
+  discountAmount Float           @default(0)
+  taxAmount      Float           @default(0)
+  total          Float
+  status         InvoiceStatus   @default(Draft)
+  notes          String?
+  terms          String?
+  deletedAt      DateTime?
+  createdBy      String          @db.ObjectId
+  updatedAt      DateTime        @updatedAt
 
-  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  business Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  client   Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  items    InvoiceItem[]
-  payments Payment[]
-  statusLogs StatusLog[]
+  user            User             @relation(fields: [userId], references: [id])
+  business        Business         @relation(fields: [businessId], references: [id])
+  client          Client?          @relation(fields: [clientId], references: [id])
+  recurringInvoice RecurringInvoice? @relation(fields: [recurringId], references: [id])
+  payments        Payment[]
+  files           File[]
 
-  @@unique([businessId, invoiceNumber])
-  @@index([userId])
-  @@index([businessId])
-  @@index([businessId, status])
-  @@index([businessId, deletedAt])
-  @@index([status])
-  @@index([clientId])
   @@map("invoices")
 }
 
-// ==================== INVOICE ITEM MODEL ====================
-
 model InvoiceItem {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  invoiceId   String   @db.ObjectId
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId   String          @db.ObjectId
+  type        InvoiceItemType
   description String
-  hsnCode     String
-  quantity    Float    @default(1)
+  hsnCode     String?
+  quantity    Float
   rate        Float
+  discount    Float           @default(0)
+  taxRate     Float           @default(0)
   amount      Float
   deletedAt   DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime        @default(now())
 
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  @@index([invoiceId])
-  @@map("invoiceitems")
+  @@map("invoice_items")
 }
 
-// ==================== PAYMENT MODEL ====================
+model RecurringInvoice {
+  id         String              @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String              @db.ObjectId
+  businessId String              @db.ObjectId
+  clientId   String              @db.ObjectId
+  template   Json
+  frequency  RecurringFrequency
+  startDate  DateTime
+  endDate    DateTime?
+  nextRun    DateTime
+  autoSend   Boolean             @default(false)
+  deletedAt  DateTime?
+  createdAt  DateTime            @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+  client   Client   @relation(fields: [clientId], references: [id])
+  invoices Invoice[]
+
+  @@map("recurring_invoices")
+}
 
 model Payment {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  invoiceId String   @db.ObjectId
-  userId    String   @db.ObjectId
-  amount    Float
-  method    String?
-  reference String?
-  status    String   @default("PENDING")
-  notes     String?
-  paidAt    DateTime?
-  deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId   String        @db.ObjectId
+  userId      String        @db.ObjectId
+  amount      Float
+  method      PaymentMethod
+  reference   String?
+  notes       String?
+  status      PaymentStatus @default(Completed)
+  paidAt      DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime      @default(now())
 
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
 
-  @@index([invoiceId])
-  @@index([userId])
   @@map("payments")
 }
 
-// ==================== ACTIVITY LOG MODEL (for internal reference) ====================
+model Expense {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  businessId  String    @db.ObjectId
+  category    String
+  amount      Float
+  description String?
+  receiptUrl  String?
+  date        DateTime  @default(now())
+  taxAmount   Float?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
 
-model ActivityLog {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String   @db.ObjectId
-  action      String   // e.g., "CREATE_INVOICE", "UPDATE_CLIENT", "DELETE_INVOICE"
-  entity      String   // e.g., "Invoice", "Client", "Business"
-  entityId    String?  @db.ObjectId
-  method      String   // HTTP method: GET, POST, PUT, DELETE
-  path        String   // API endpoint path
-  statusCode  Int?     // HTTP response status code
-  ip          String?
-  userAgent   String?
-  requestBody Json?    // sanitized request body
-  metadata    Json?    // any additional context
-  createdAt   DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([action])
-  @@index([entity])
-  @@index([entityId])
-  @@index([createdAt])
-  @@map("activitylogs")
+  @@map("expenses")
 }
 
-// ==================== STATUS LOG MODEL (user-facing audit trail) ====================
+model ActivityLog {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String    @db.ObjectId
+  action     String
+  entity     String
+  entityId   String?
+  method     String
+  path       String
+  statusCode Int?
+  ip         String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}
 
 model StatusLog {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  entity      String   // e.g., "Invoice", "Client"
-  entityId    String   @db.ObjectId
-  action      String   // e.g., "CREATED", "STATUS_CHANGED", "UPDATED"
-  oldValue    String?  // previous value (e.g., old status)
-  newValue    String?  // new value (e.g., new status)
-  description String?  // human-readable description
-  changedBy   String   @db.ObjectId
-  metadata    Json?    // changes diff, etc.
-  createdAt   DateTime @default(now())
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  entity      String
+  entityId    String
+  action      String
+  oldValue    String?
+  newValue    String?
+  description String?
+  changedBy   String    @db.ObjectId
+  metadata    Json?
+  createdAt   DateTime  @default(now())
 
-  invoice Invoice? @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user User @relation("StatusLogChangedBy", fields: [changedBy], references: [id])
 
-  @@index([entity, entityId])
-  @@index([entityId])
-  @@index([changedBy])
-  @@index([createdAt])
-  @@map("statuslogs")
+  @@map("status_logs")
+}
+
+model TeamMember {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  businessId  String       @db.ObjectId
+  userId      String       @db.ObjectId
+  role        TeamRole     @default(Employee)
+  permissions String[]
+  invitedBy   String       @db.ObjectId
+  joinedAt    DateTime     @default(now())
+  deletedAt   DateTime?
+
+  business Business @relation(fields: [businessId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([businessId, userId])
+  @@map("team_members")
+}
+
+model Invitation {
+  id         String             @id @default(auto()) @map("_id") @db.ObjectId
+  businessId String             @db.ObjectId
+  email      String
+  role       TeamRole
+  invitedBy  String             @db.ObjectId
+  token      String             @unique
+  expiresAt  DateTime
+  status     InvitationStatus   @default(Pending)
+  createdAt  DateTime           @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  inviter  User     @relation("InvitationInvitedBy", fields: [invitedBy], references: [id])
+
+  @@map("invitations")
+}
+
+model File {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String    @db.ObjectId
+  businessId String    @db.ObjectId
+  entityType String
+  entityId   String
+  fileName   String
+  fileUrl    String
+  mimeType   String
+  size       Int
+  uploadedBy String    @db.ObjectId
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@map("files")
+}
+
+model Notification {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String           @db.ObjectId
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model Subscription {
+  id                   String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId               String            @unique @db.ObjectId
+  plan                 Plan              @default(Free)
+  status               SubscriptionStatus @default(Active)
+  currentPeriodStart   DateTime          @default(now())
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean           @default(false)
+  paymentMethod        String?
+  createdAt            DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
+}
+
+enum Plan {
+  Free
+  Starter
+  Professional
+  Business
+}
+
+enum ClientStatus {
+  Active
+  Inactive
+  Archived
+}
+
+enum EstimateStatus {
+  Draft
+  Sent
+  Accepted
+  Rejected
+  Expired
+}
+
+enum InvoiceStatus {
+  Draft
+  Sent
+  Viewed
+  PartiallyPaid
+  Paid
+  Overdue
+  Cancelled
+}
+
+enum InvoiceItemType {
+  Product
+  Service
+  Custom
+}
+
+enum RecurringFrequency {
+  Daily
+  Weekly
+  Monthly
+  Quarterly
+  Yearly
+}
+
+enum PaymentMethod {
+  Cash
+  BankTransfer
+  UPI
+  Card
+  Cheque
+  Online
+  Other
+}
+
+enum PaymentStatus {
+  Pending
+  Completed
+  Failed
+  Refunded
+}
+
+enum TeamRole {
+  Owner
+  Admin
+  Accountant
+  Manager
+  Employee
+  Viewer
+}
+
+enum InvitationStatus {
+  Pending
+  Accepted
+  Rejected
+  Expired
+}
+
+enum NotificationType {
+  Invoice
+  Payment
+  System
+  Reminder
+}
+
+enum SubscriptionStatus {
+  Active
+  Inactive
+  Cancelled
+  PastDue
 }

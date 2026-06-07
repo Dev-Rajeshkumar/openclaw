@@ -1,88 +1,117 @@
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { IApiResponse, IAuthTokens } from '../types';
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
+import { ApiError } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
-const ACCESS_TOKEN_KEY = 'bb_access_token';
-const REFRESH_TOKEN_KEY = 'bb_refresh_token';
-const BUSINESS_ID_KEY = 'bb_business_id';
-
-// Create axios instance
+// Create Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// ==================== TOKEN HELPERS ====================
+// Token management
+let accessToken: string | null = null;
+let refreshToken: string | null = null;
+let isRefreshing = false;
+let failedQueue: {
+  resolve: (value: unknown) => void;
+  reject: (reason?: unknown) => void;
+}[] = [];
 
-export const getTokens = (): IAuthTokens | null => {
-  if (typeof window === 'undefined') return null;
-  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!accessToken || !refreshToken) return null;
-  return { accessToken, refreshToken };
-};
+function processQueue(error: unknown, token: string | null = null) {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+}
 
-export const setTokens = (tokens: IAuthTokens): void => {
-  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
-};
+export function setTokens(access: string, refresh: string) {
+  accessToken = access;
+  refreshToken = refresh;
+  if (typeof window !== "undefined") {
+    localStorage.setItem("accessToken", access);
+    localStorage.setItem("refreshToken", refresh);
+  }
+}
 
-export const clearTokens = (): void => {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-  localStorage.removeItem(BUSINESS_ID_KEY);
-};
+export function clearTokens() {
+  accessToken = null;
+  refreshToken = null;
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("activeBusinessId");
+  }
+}
 
-// ==================== BUSINESS ID HELPERS ====================
+export function getAccessToken(): string | null {
+  if (accessToken) return accessToken;
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("accessToken");
+  }
+  return null;
+}
 
-export const getBusinessId = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(BUSINESS_ID_KEY);
-};
+export function getRefreshToken(): string | null {
+  if (refreshToken) return refreshToken;
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("refreshToken");
+  }
+  return null;
+}
 
-export const setBusinessId = (businessId: string): void => {
-  localStorage.setItem(BUSINESS_ID_KEY, businessId);
-};
+// Business context
+export function setActiveBusiness(businessId: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("activeBusinessId", businessId);
+  }
+}
 
-// ==================== REQUEST INTERCEPTOR ====================
+export function getActiveBusiness(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("activeBusinessId");
+  }
+  return null;
+}
 
+// Initialize tokens from localStorage on client side
+if (typeof window !== "undefined") {
+  accessToken = localStorage.getItem("accessToken");
+  refreshToken = localStorage.getItem("refreshToken");
+}
+
+// Request interceptor
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const tokens = getTokens();
-    if (tokens?.accessToken) {
-      config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    // Attach business ID to every request
-    const businessId = getBusinessId();
+
+    const businessId = getActiveBusiness();
     if (businessId) {
-      config.headers['x-business-id'] = businessId;
+      config.headers["X-Business-Id"] = businessId;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ==================== RESPONSE INTERCEPTOR ====================
-
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (token: string) => void;
-  reject: (error: unknown) => void;
-}> = [];
-
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) { prom.reject(error); } else { prom.resolve(token!); }
-  });
-  failedQueue = [];
-};
-
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError<IApiResponse>) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
     if (error.response?.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
@@ -90,50 +119,64 @@ api.interceptors.response.use(
 
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
-        failedQueue.push({
-          resolve: (token: string) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            resolve(api(originalRequest));
-          },
-          reject,
-        });
-      });
+        failedQueue.push({ resolve, reject });
+      })
+        .then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        })
+        .catch((err) => Promise.reject(err));
     }
 
     originalRequest._retry = true;
     isRefreshing = true;
 
-    const tokens = getTokens();
-    if (!tokens?.refreshToken) {
-      clearTokens();
-      isRefreshing = false;
-      return Promise.reject(error);
-    }
-
     try {
-      const { data } = await axios.post<IApiResponse<IAuthTokens>>(
-        `${API_BASE_URL}/auth/refresh`,
-        { refreshToken: tokens.refreshToken }
-      );
-
-      if (data.success && data.data) {
-        setTokens(data.data);
-        originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
-        processQueue(null, data.data.accessToken);
-        return api(originalRequest);
+      const refresh = getRefreshToken();
+      if (!refresh) {
+        clearTokens();
+        window.location.href = "/login";
+        return Promise.reject(error);
       }
-      throw new Error('Token refresh failed');
+
+      const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+        refreshToken: refresh,
+      });
+
+      const {
+        accessToken: newAccess,
+        refreshToken: newRefresh,
+      } = response.data;
+
+      setTokens(newAccess, newRefresh);
+      processQueue(null, newAccess);
+      originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+      return api(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
       clearTokens();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/auth/login';
-      }
+      window.location.href = "/login";
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
     }
   }
 );
+
+// Error helper
+export function getApiError(error: unknown): ApiError {
+  if (axios.isAxiosError(error) && error.response?.data) {
+    const data = error.response.data as Record<string, unknown>;
+    return {
+      message: (data.message as string) || "An error occurred",
+      code: (data.code as string) || "UNKNOWN_ERROR",
+      details: data.details as Record<string, string[]> | undefined,
+    };
+  }
+  return {
+    message: error instanceof Error ? error.message : "An error occurred",
+    code: "UNKNOWN_ERROR",
+  };
+}
 
 export default api;

@@ -1,25 +1,21 @@
 import { z } from 'zod';
 
 export const updateProfileSchema = z.object({
-  body: z.object({
-    fullName: z.string().min(2).max(100).optional(),
-    avatar: z.string().url().optional().nullable(),
-  }),
+  fullName: z.string().min(2).max(100).optional(),
+  phone: z.string().optional(),
+  avatar: z.string().url().optional(),
+  currency: z.string().length(3).optional(),
+  language: z.string().length(2).optional(),
+  timezone: z.string().optional(),
 });
 
 export const changePasswordSchema = z.object({
-  body: z.object({
-    currentPassword: z.string({ required_error: 'Current password is required' }),
-    newPassword: z
-      .string({ required_error: 'New password is required' })
-      .min(8, 'Password must be at least 8 characters')
-      .max(100)
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-      ),
-  }),
+  oldPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      'Password must contain uppercase, lowercase, and a number'
+    ),
 });
-
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>['body'];
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];

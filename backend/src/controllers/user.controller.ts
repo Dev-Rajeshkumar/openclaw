@@ -1,66 +1,61 @@
 import { Response, NextFunction } from 'express';
-import { userService } from '../services/user.service.js';
-import { sendSuccess } from '../utils/response.js';
-import { IAuthRequest, IApiResponse } from '../types/index.js';
-import { UpdateProfileInput, ChangePasswordInput, UpdatePlanInput } from '../validators/user.validator.js';
+import * as userService from '../services/user.service.js';
+import { AuthenticatedRequest } from '../types/index.js';
+import { ApiResponse } from '../utils/response.js';
 
-export class UserController {
-  /**
-   * GET /api/users/profile
-   */
-  async getProfile(req: IAuthRequest, res: Response<IApiResponse>, next: NextFunction) {
-    try {
-      const result = await userService.getProfile(req.user!.userId);
-      sendSuccess(res, result, 'Profile fetched successfully');
-    } catch (error) {
-      next(error);
-    }
+export const getProfile = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const user = await userService.getProfile(userId);
+    res.status(200).json(ApiResponse.success(user));
+  } catch (error) {
+    next(error);
   }
+};
 
-  /**
-   * PUT /api/users/profile
-   */
-  async updateProfile(req: IAuthRequest, res: Response<IApiResponse>, next: NextFunction) {
-    try {
-      const result = await userService.updateProfile(
-        req.user!.userId,
-        req.body as UpdateProfileInput
-      );
-      sendSuccess(res, result, 'Profile updated successfully');
-    } catch (error) {
-      next(error);
-    }
+export const updateProfile = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const user = await userService.updateProfile(userId, req.body);
+    res.status(200).json(ApiResponse.success(user, 'Profile updated successfully'));
+  } catch (error) {
+    next(error);
   }
+};
 
-  /**
-   * PUT /api/users/change-password
-   */
-  async changePassword(req: IAuthRequest, res: Response<IApiResponse>, next: NextFunction) {
-    try {
-      const result = await userService.changePassword(
-        req.user!.userId,
-        req.body as ChangePasswordInput
-      );
-      sendSuccess(res, result, 'Password changed successfully');
-    } catch (error) {
-      next(error);
-    }
+export const changePassword = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { oldPassword, newPassword } = req.body;
+    const result = await userService.changePassword(userId, oldPassword, newPassword);
+    res.status(200).json(ApiResponse.success(result));
+  } catch (error) {
+    next(error);
   }
+};
 
-  /**
-   * PUT /api/users/plan
-   */
-  async updatePlan(req: IAuthRequest, res: Response<IApiResponse>, next: NextFunction) {
-    try {
-      const result = await userService.updatePlan(
-        req.user!.userId,
-        req.body as UpdatePlanInput
-      );
-      sendSuccess(res, result, 'Plan updated successfully');
-    } catch (error) {
-      next(error);
-    }
+export const deleteAccount = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const result = await userService.deleteAccount(userId);
+    res.status(200).json(ApiResponse.success(result));
+  } catch (error) {
+    next(error);
   }
-}
-
-export const userController = new UserController();
+};

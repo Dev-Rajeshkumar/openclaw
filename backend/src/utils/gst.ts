@@ -1,125 +1,135 @@
-import { GstType } from '../types/index.js';
+/**
+ * GST (Goods and Services Tax) utilities for India
+ */
 
-export interface IGstBreakdown {
+export interface GSTBreakdown {
   cgst: number;
   sgst: number;
   igst: number;
-  utgst: number;
-  totalGst: number;
+  total: number;
+}
+
+export interface GSTValidationResult {
+  valid: boolean;
+  stateCode?: string;
+  error?: string;
 }
 
 /**
- * Calculate GST breakdown based on type and rate
+ * Calculate GST breakdown from a total amount and tax rate.
+ * For intra-state: CGST + SGST (split equally)
+ * For inter-state: IGST (full rate)
  */
-export const calculateGst = (
-  subtotal: number,
-  gstRate: number,
-  gstType: GstType
-): IGstBreakdown => {
-  const totalGst = Math.round((subtotal * gstRate) / 100 * 100) / 100;
+export function calculateGST(
+  amount: number,
+  taxRate: number,
+  isInterState: boolean = false
+): GSTBreakdown {
+  const totalTax = (amount * taxRate) / 100;
 
-  switch (gstType) {
-    case GstType.CGST_SGST: {
-      const half = Math.round((totalGst / 2) * 100) / 100;
-      return { cgst: half, sgst: half, igst: 0, utgst: 0, totalGst };
-    }
-    case GstType.IGST:
-      return { cgst: 0, sgst: 0, igst: totalGst, utgst: 0, totalGst };
-    case GstType.UTGST: {
-      const half = Math.round((totalGst / 2) * 100) / 100;
-      return { cgst: 0, sgst: 0, igst: 0, utgst: half, totalGst: half * 2 };
-    }
-    default:
-      return { cgst: 0, sgst: 0, igst: 0, utgst: 0, totalGst: 0 };
+  if (isInterState) {
+    return {
+      cgst: 0,
+      sgst: 0,
+      igst: Math.round(totalTax * 100) / 100,
+      total: Math.round(totalTax * 100) / 100,
+    };
   }
-};
 
-/**
- * Calculate invoice totals from items
- */
-export const calculateInvoiceTotals = (
-  items: Array<{ quantity: number; rate: number }>,
-  gstRate: number,
-  gstType: GstType
-): { subtotal: number; gstBreakdown: IGstBreakdown; total: number } => {
-  const subtotal = items.reduce(
-    (sum, item) => sum + Math.round(item.quantity * item.rate * 100) / 100,
-    0
-  );
-  const gstBreakdown = calculateGst(subtotal, gstRate, gstType);
-  const total = Math.round((subtotal + gstBreakdown.totalGst) * 100) / 100;
-
-  return { subtotal, gstBreakdown, total };
-};
-
-/**
- * Format currency in Indian style
- */
-export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-};
-
-/**
- * Convert number to words (Indian numbering system)
- */
-export const numberToWords = (num: number): string => {
-  if (num === 0) return 'Zero';
-
-  const ones = [
-    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-    'Seventeen', 'Eighteen', 'Nineteen',
-  ];
-  const tens = [
-    '', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety',
-  ];
-
-  const convertHundreds = (n: number): string => {
-    let result = '';
-    if (n >= 100) {
-      result += ones[Math.floor(n / 100)] + ' Hundred ';
-      n %= 100;
-    }
-    if (n >= 20) {
-      result += tens[Math.floor(n / 10)] + ' ';
-      n %= 10;
-    }
-    if (n > 0) {
-      result += ones[n] + ' ';
-    }
-    return result;
+  const halfTax = totalTax / 2;
+  return {
+    cgst: Math.round(halfTax * 100) / 100,
+    sgst: Math.round(halfTax * 100) / 100,
+    igst: 0,
+    total: Math.round(totalTax * 100) / 100,
   };
+}
 
-  const integerPart = Math.floor(num);
-  const decimalPart = Math.round((num - integerPart) * 100);
+/**
+ * Calculate GST from a tax-inclusive amount
+ */
+export function calculateGSTExclusive(
+  inclusiveAmount: number,
+  taxRate: number,
+  isInterState: boolean = false
+): { baseAmount: number; gst: GSTBreakdown } {
+  const baseAmount = (inclusiveAmount * 100) / (100 + taxRate);
+  const gst = calculateGST(baseAmount, taxRate, isInterState);
+  return {
+    baseAmount: Math.round(baseAmount * 100) / 100,
+    gst,
+  };
+}
 
-  if (integerPart === 0) {
-    return decimalPart > 0
-      ? `${convertHundreds(decimalPart)}Paise Only`
-      : 'Zero';
+/**
+ * Validate Indian GST number format
+ * Format: 22AAAAA0000A1Z5 (15 characters)
+ * - First 2 digits: State code
+ * - Next 10: PAN of the entity
+ * - Next 1: Entity number of same PAN in a state
+ * - Next 1: 'Z' by default
+ * - Last 1: Checksum
+ */
+export function validateGSTNumber(gstNumber: string): GSTValidationResult {
+  const cleaned = gstNumber.trim().toUpperCase();
+
+  if (cleaned.length !== 15) {
+    return { valid: false, error: 'GST number must be 15 characters' };
   }
 
-  let result = '';
-  const crore = Math.floor(integerPart / 10000000);
-  const lakh = Math.floor((integerPart % 10000000) / 100000);
-  const thousand = Math.floor((integerPart % 100000) / 1000);
-  const remainder = integerPart % 1000;
+  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
-  if (crore > 0) result += convertHundreds(crore) + 'Crore ';
-  if (lakh > 0) result += convertHundreds(lakh) + 'Lakh ';
-  if (thousand > 0) result += convertHundreds(thousand) + 'Thousand ';
-  if (remainder > 0) result += convertHundreds(remainder);
-
-  result = result.trim() + ' Rupees';
-
-  if (decimalPart > 0) {
-    result += ' and ' + convertHundreds(decimalPart) + 'Paise';
+  if (!gstRegex.test(cleaned)) {
+    return { valid: false, error: 'Invalid GST number format' };
   }
 
-  return result + ' Only';
+  const stateCode = cleaned.substring(0, 2);
+  const validStateCodes = [
+    '01', '02', '03', '04', '05', '06', '07', '08', '09', '10',
+    '11', '12', '13', '14', '15', '16', '17', '18', '19', '20',
+    '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
+    '31', '32', '33', '34', '35', '36', '37', '97', '99',
+  ];
+
+  if (!validStateCodes.includes(stateCode)) {
+    return { valid: false, error: 'Invalid state code in GST number' };
+  }
+
+  return { valid: true, stateCode };
+}
+
+/**
+ * Validate Indian PAN number format
+ * Format: AAAAA0000A (10 characters)
+ */
+export function validatePAN(pan: string): boolean {
+  const cleaned = pan.trim().toUpperCase();
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  return panRegex.test(cleaned);
+}
+
+/**
+ * Common GST rates in India
+ */
+export const GST_RATES = {
+  EXEMPT: 0,
+  ZERO: 0,
+  FIVE: 5,
+  TWELVE: 12,
+  EIGHTEEN: 18,
+  TWENTY_EIGHT: 28,
+} as const;
+
+/**
+ * HSN code categories with common rates
+ */
+export const HSN_RATES: Record<string, number> = {
+  '99': 18, // Services
+  '61': 12, // Textiles
+  '62': 12, // Apparel
+  '84': 18, // Machinery
+  '85': 18, // Electrical equipment
+  '87': 28, // Vehicles
+  '30': 12, // Pharmaceuticals
+  '22': 18, // Beverages
 };

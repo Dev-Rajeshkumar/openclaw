@@ -1,39 +1,19 @@
 import { Router } from 'express';
-import { userController } from '../controllers/user.controller.js';
+import * as userController from '../controllers/user.controller.js';
+import { auth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { authenticate } from '../middleware/auth.js';
 import {
   updateProfileSchema,
   changePasswordSchema,
-  updatePlanSchema,
 } from '../validators/user.validator.js';
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticate);
+router.use(auth);
 
-router.get(
-  '/profile',
-  userController.getProfile.bind(userController)
-);
-
-router.put(
-  '/profile',
-  validate(updateProfileSchema),
-  userController.updateProfile.bind(userController)
-);
-
-router.put(
-  '/change-password',
-  validate(changePasswordSchema),
-  userController.changePassword.bind(userController)
-);
-
-router.put(
-  '/plan',
-  validate(updatePlanSchema),
-  userController.updatePlan.bind(userController)
-);
+router.get('/profile', userController.getProfile);
+router.put('/profile', validate(updateProfileSchema), userController.updateProfile);
+router.put('/change-password', validate(changePasswordSchema), userController.changePassword);
+router.delete('/account', userController.deleteAccount);
 
 export default router;
