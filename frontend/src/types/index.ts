@@ -11,11 +11,9 @@ export interface IUser {
   id: string;
   email: string;
   fullName: string;
-  businessName: string | null;
-  gstNumber: string | null;
-  phone: string | null;
-  address: string | null;
-  plan: SubscriptionPlan;
+  avatar: string | null;
+  googleId: string | null;
+  isEmailVerified: boolean;
   createdAt: string;
 }
 
@@ -29,11 +27,38 @@ export interface IAuthResponse {
   tokens: IAuthTokens;
 }
 
+// ==================== BUSINESS TYPES ====================
+
+export interface IBusiness {
+  id: string;
+  userId: string;
+  name: string;
+  gstNumber: string | null;
+  phone: string | null;
+  address: string | null;
+  logo: string | null;
+  invoicePrefix: string;
+  nextInvoiceNo: number;
+  plan: SubscriptionPlan;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IBusinessFormData {
+  name: string;
+  gstNumber: string;
+  phone: string;
+  address: string;
+  logo: string;
+  invoicePrefix: string;
+}
+
 // ==================== CLIENT TYPES ====================
 
 export interface IClient {
   id: string;
   userId: string;
+  businessId: string;
   name: string;
   email: string | null;
   phone: string | null;
@@ -79,6 +104,7 @@ export interface IInvoiceItem {
 export interface IInvoice {
   id: string;
   userId: string;
+  businessId: string;
   clientId: string | null;
   invoiceNumber: string;
   invoiceDate: string;
@@ -92,6 +118,7 @@ export interface IInvoice {
   notes: string | null;
   items: IInvoiceItem[];
   client?: IClient;
+  statusLogs?: IStatusLog[];
   createdAt: string;
   updatedAt: string;
 }
@@ -121,6 +148,43 @@ export interface IPayment {
   createdAt: string;
 }
 
+// ==================== ACTIVITY LOG TYPES ====================
+
+export interface IActivityLog {
+  id: string;
+  userId: string;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  method: string;
+  path: string;
+  statusCode: number | null;
+  ip: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    email: string;
+    fullName: string;
+  };
+}
+
+// ==================== STATUS LOG TYPES ====================
+
+export interface IStatusLog {
+  id: string;
+  entity: string;
+  entityId: string;
+  action: string;
+  oldValue: string | null;
+  newValue: string | null;
+  description: string | null;
+  changedBy: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
 // ==================== API TYPES ====================
 
 export interface IApiResponse<T = unknown> {
@@ -128,21 +192,12 @@ export interface IApiResponse<T = unknown> {
   message: string;
   data?: T;
   error?: string;
+  requestId?: string;
   meta?: {
     page?: number;
     limit?: number;
     total?: number;
     totalPages?: number;
-  };
-}
-
-export interface IPaginatedResponse<T> {
-  data: T[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
   };
 }
 

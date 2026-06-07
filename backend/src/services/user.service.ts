@@ -1,14 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler.js';
-import { UpdateProfileInput, ChangePasswordInput, UpdatePlanInput } from '../validators/user.validator.js';
+import { UpdateProfileInput, ChangePasswordInput } from '../validators/user.validator.js';
 
 const prisma = new PrismaClient();
 
 export class UserService {
-  /**
-   * Get user profile
-   */
   async getProfile(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -16,28 +13,16 @@ export class UserService {
         id: true,
         email: true,
         fullName: true,
-        businessName: true,
-        gstNumber: true,
-        phone: true,
-        address: true,
-        plan: true,
-        invoiceCount: true,
-        clientCount: true,
+        avatar: true,
+        googleId: true,
+        isEmailVerified: true,
         createdAt: true,
-        updatedAt: true,
       },
     });
-
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
+    if (!user || user.deletedAt) throw new AppError('User not found', 404);
     return user;
   }
 
-  /**
-   * Update user profile
-   */
   async updateProfile(userId: string, input: UpdateProfileInput) {
     const user = await prisma.user.update({
       where: { id: userId },
@@ -46,63 +31,30 @@ export class UserService {
         id: true,
         email: true,
         fullName: true,
-        businessName: true,
-        gstNumber: true,
-        phone: true,
-        address: true,
-        plan: true,
+        avatar: true,
+        googleId: true,
+        isEmailVerified: true,
         createdAt: true,
         updatedAt: true,
       },
     });
-
     return user;
   }
 
-  /**
-   * Change password
-   */
   async changePassword(userId: string, input: ChangePasswordInput) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
 
-    if (!user) {
-      throw new AppError('User not found', 404);
+    if (!user.password) {
+      throw new AppError('This account uses Google Sign-In. Set a password first.', 400);
     }
 
     const isPasswordValid = await bcrypt.compare(input.currentPassword, user.password);
-    if (!isPasswordValid) {
-      throw new AppError('Current password is incorrect', 401);
-    }
+    if (!isPasswordValid) throw new AppError('Current password is incorrect', 401);
 
     const hashedPassword = await bcrypt.hash(input.newPassword, 12);
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword },
-    });
-
+    await prisma.user.update({ where: { id: userId }, data: { password: hashedPassword } });
     return { message: 'Password changed successfully' };
-  }
-
-  /**
-   * Update subscription plan
-   */
-  async updatePlan(userId: string, input: UpdatePlanInput) {
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: { plan: input.plan },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        plan: true,
-        updatedAt: true,
-      },
-    });
-
-    return user;
   }
 }
 

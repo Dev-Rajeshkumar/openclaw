@@ -2,11 +2,13 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { IUser, IAuthTokens, IAuthResponse } from '@/types';
-import api, { setTokens, clearTokens, getTokens } from '@/lib/api';
+import { IUser, IAuthTokens, IAuthResponse, IBusiness } from '@/types';
+import api, { setTokens, clearTokens, getTokens, setBusinessId, getBusinessId } from '@/lib/api';
 
 interface AuthState {
   user: IUser | null;
+  businesses: IBusiness[];
+  activeBusiness: IBusiness | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -17,8 +19,11 @@ interface AuthState {
     businessName?: string;
     phone?: string;
   }) => Promise<void>;
+  googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
   fetchProfile: () => Promise<void>;
+  fetchBusinesses: () => Promise<void>;
+  setActiveBusiness: (business: IBusiness) => void;
   updateUser: (user: Partial<IUser>) => void;
 }
 
@@ -26,6 +31,8 @@ export const useAuth = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
+      businesses: [],
+      activeBusiness: null,
       isAuthenticated: false,
       isLoading: false,
 
@@ -37,6 +44,8 @@ export const useAuth = create<AuthState>()(
             const { user, tokens } = data.data as IAuthResponse;
             setTokens(tokens);
             set({ user, isAuthenticated: true, isLoading: false });
+            // Fetch businesses after login
+            await get().fetchBusinesses();
           }
         } catch (error) {
           set({ isLoading: false });
@@ -52,6 +61,23 @@ export const useAuth = create<AuthState>()(
             const { user, tokens } = data.data as IAuthResponse;
             setTokens(tokens);
             set({ user, isAuthenticated: true, isLoading: false });
+            await get().fetchBusinesses();
+          }
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      googleLogin: async (idToken) => {
+        set({ isLoading: true });
+        try {
+          const { data } = await api.post('/auth/google', { idToken });
+          if (data.success && data.data) {
+            const { user, tokens } = data.data as IAuthResponse;
+            setTokens(tokens);
+            set({ user, isAuthenticated: true, isLoading: false });
+            await get().fetchBusinesses();
           }
         } catch (error) {
           set({ isLoading: false });
@@ -61,7 +87,7 @@ export const useAuth = create<AuthState>()(
 
       logout: () => {
         clearTokens();
-        set({ user: null, isAuthenticated: false });
+        set({ user: null, businesses: [], activeBusiness: null, isAuthenticated: false });
       },
 
       fetchProfile: async () => {
@@ -70,7 +96,6 @@ export const useAuth = create<AuthState>()(
           set({ isAuthenticated: false, user: null });
           return;
         }
-
         try {
           const { data } = await api.get('/auth/me');
           if (data.success && data.data) {
@@ -80,6 +105,30 @@ export const useAuth = create<AuthState>()(
           clearTokens();
           set({ user: null, isAuthenticated: false });
         }
+      },
+
+      fetchBusinesses: async () => {
+        try {
+          const { data } = await api.get('/businesses');
+          if (data.success && data.data) {
+            const businesses = data.data as IBusiness[];
+            // Check if saved businessId is still valid
+            const savedBusinessId = getBusinessId();
+            const savedBusiness = businesses.find((b) => b.id === savedBusinessId);
+            const activeBusiness = savedBusiness || businesses[0] || null;
+            if (activeBusiness) {
+              setBusinessId(activeBusiness.id);
+            }
+            set({ businesses, activeBusiness });
+          }
+        } catch (error) {
+          console.error('Failed to fetch businesses:', error);
+        }
+      },
+
+      setActiveBusiness: (business) => {
+        setBusinessId(business.id);
+        set({ activeBusiness: business });
       },
 
       updateUser: (updates) => {
