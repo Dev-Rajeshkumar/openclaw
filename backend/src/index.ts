@@ -28,6 +28,7 @@ import activityLogRoutes from './routes/activityLog.routes.js';
 import statusLogRoutes from './routes/statusLog.routes.js';
 import productRoutes from './routes/product.routes.js';
 import publicInvoiceRoutes from './routes/publicInvoice.routes.js';
+import razorpayPaymentRoutes from './routes/razorpayPayment.routes.js';
 import gstRoutes from './routes/gst.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import invoiceTemplateRoutes from './routes/invoiceTemplate.routes.js';
@@ -93,6 +94,7 @@ app.use(`${API_PREFIX}/businesses/:businessId/reports`, reportRoutes);
 
 // ─── Public Invoice Routes (no auth) ──────────────────────────────
 app.use('/public/invoices', publicInvoiceRoutes);
+app.use('/public/payments', razorpayPaymentRoutes);
 
 // ─── Activity Logger (after routes to capture all API calls) ────────
 app.use(activityLogger);

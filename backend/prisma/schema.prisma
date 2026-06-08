@@ -55,6 +55,9 @@ model Business {
   logo           String?
   invoicePrefix  String    @default("INV")
   nextInvoiceNo  Int       @default(1)
+  razorpayKeyId  String?
+  razorpayKeySecret String?
+  razorpayEnabled Boolean @default(false)
   deletedAt      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -240,17 +243,20 @@ model RecurringInvoice {
 }
 
 model Payment {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  invoiceId   String        @db.ObjectId
-  userId      String        @db.ObjectId
-  amount      Float
-  method      PaymentMethod
-  reference   String?
-  notes       String?
-  status      PaymentStatus @default(Completed)
-  paidAt      DateTime?
-  deletedAt   DateTime?
-  createdAt   DateTime      @default(now())
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId        String        @db.ObjectId
+  userId           String        @db.ObjectId
+  amount           Float
+  method           PaymentMethod
+  reference        String?
+  notes            String?
+  status           PaymentStatus @default(Completed)
+  paidAt           DateTime?
+  razorpayOrderId  String?
+  razorpayPaymentId String?
+  razorpaySignature String?
+  deletedAt        DateTime?
+  createdAt        DateTime      @default(now())
 
   invoice Invoice @relation(fields: [invoiceId], references: [id])
   user    User    @relation(fields: [userId], references: [id])

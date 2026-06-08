@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { FileText, Download, Calendar, IndianRupee, Building2, User, Phone, Mail, Hash } from 'lucide-react';
+import { FileText, Download, Calendar, Building2, User, Phone, Mail, Hash, CreditCard, CheckCircle, Loader2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 interface PublicInvoice {
   id: string;
@@ -38,20 +40,28 @@ interface PublicBusiness {
   logo: string | null;
 }
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export default function PublicInvoicePage() {
   const params = useParams();
   const token = params.token as string;
   const [data, setData] = useState<{ invoice: PublicInvoice; client: PublicClient | null; business: PublicBusiness | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [paying, setPaying] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-    fetch(`${apiUrl}/v1/public/invoices/${token}`)
+  const fetchInvoice = useCallback(() => {
+    fetch(`${API_URL}/v1/public/invoices/${token}`)
       .then((r) => r.json())
       .then((json) => {
         if (json.success && json.data) {
           setData(json.data);
+          if (json.data.invoice.status === 'Paid') setPaymentSuccess(true);
         } else {
           setError(json.message || 'Invoice not found');
         }
@@ -60,9 +70,91 @@ export default function PublicInvoicePage() {
       .finally(() => setLoading(false));
   }, [token]);
 
+  useEffect(() => { fetchInvoice(); }, [fetchInvoice]);
+
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) { resolve(true); return; }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePayNow = async () => {
+    if (!data) return;
+    setPaying(true);
+    try {
+      // Create order
+      const orderRes = await fetch(`${API_URL}/v1/public/payments/invoice/${token}/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const orderJson = await orderRes.json();
+      if (!orderJson.success) throw new Error(orderJson.message || 'Failed to create order');
+
+      const { orderId, amount, currency, key } = orderJson.data;
+
+      // Load Razorpay
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) throw new Error('Failed to load payment gateway');
+
+      // Open checkout
+      const options = {
+        key,
+        amount,
+        currency,
+        name: data.business?.name || 'Invoice Payment',
+        description: `Payment for ${data.invoice.invoiceNumber}`,
+        order_id: orderId,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch(`${API_URL}/v1/public/payments/invoice/${token}/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+            const verifyJson = await verifyRes.json();
+            if (verifyJson.success) {
+              setPaymentSuccess(true);
+              fetchInvoice(); // Refresh to show paid status
+            } else {
+              throw new Error(verifyJson.message);
+            }
+          } catch (err: any) {
+            alert('Payment verification failed: ' + err.message);
+          }
+        },
+        prefill: {
+          name: data.client?.name || '',
+          email: data.client?.email || '',
+          contact: data.client?.phone || '',
+        },
+        theme: {
+          color: '#f59e0b',
+        },
+        modal: {
+          ondismiss: () => setPaying(false),
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      alert(err.message || 'Payment failed');
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const handleDownloadPDF = () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-    window.open(`${apiUrl}/v1/public/invoices/${token}/pdf`, '_blank');
+    window.open(`${API_URL}/v1/public/invoices/${token}/pdf`, '_blank');
   };
 
   if (loading) {
@@ -97,6 +189,7 @@ export default function PublicInvoicePage() {
     Cancelled: 'bg-gray-200 text-gray-500',
     Viewed: 'bg-indigo-100 text-indigo-700',
   };
+  const isPaid = invoice.status === 'Paid' || paymentSuccess;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,17 +200,39 @@ export default function PublicInvoicePage() {
             <FileText size={18} className="text-amber-500" />
             <span className="font-semibold text-gray-900 text-sm">{invoice.invoiceNumber}</span>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[invoice.status] || 'bg-gray-100 text-gray-600'}`}>
-              {invoice.status}
+              {isPaid ? 'Paid' : invoice.status}
             </span>
           </div>
-          <button
-            onClick={handleDownloadPDF}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition"
-          >
-            <Download size={14} /> Download PDF
-          </button>
+          <div className="flex items-center gap-2">
+            {!isPaid && (
+              <button
+                onClick={handlePayNow}
+                disabled={paying}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition disabled:opacity-50"
+              >
+                {paying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                {paying ? 'Processing...' : `Pay ${formatCurrency(invoice.total)}`}
+              </button>
+            )}
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition"
+            >
+              <Download size={14} /> PDF
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Payment success banner */}
+      {paymentSuccess && (
+        <div className="bg-green-50 border-b border-green-200 px-4 py-3">
+          <div className="max-w-3xl mx-auto flex items-center gap-2 text-green-700 text-sm">
+            <CheckCircle size={18} />
+            <span className="font-medium">Payment successful! Thank you for your payment.</span>
+          </div>
+        </div>
+      )}
 
       {/* Invoice content */}
       <div className="max-w-3xl mx-auto p-4 sm:p-6">

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Save, Loader2, User, Lock, Building2, Crown, FileText, Mail, Palette, Star } from 'lucide-react';
+import { Save, Loader2, User, Lock, Building2, Crown, FileText, Mail, Palette, Star, CreditCard, Check } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { profileSchema, ProfileFormData, changePasswordSchema, ChangePasswordFormData } from '@/lib/validations';
 import { IUser, IBusiness, SubscriptionPlan, CurrencyCode, IInvoiceTemplate } from '@/types';
@@ -162,6 +162,7 @@ export default function SettingsPage() {
           <TabsTrigger value="businesses" className="text-xs sm:text-sm">Business</TabsTrigger>
           <TabsTrigger value="templates" className="text-xs sm:text-sm">Templates</TabsTrigger>
           <TabsTrigger value="plan" className="text-xs sm:text-sm">Plan</TabsTrigger>
+          <TabsTrigger value="payments" className="text-xs sm:text-sm">Payments</TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -405,6 +406,47 @@ export default function SettingsPage() {
               </div>
             </>
           )}
+        </TabsContent>
+        <TabsContent value="payments" className="space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard size={20} /> Payment Settings</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-500">Configure Razorpay to accept online payments from clients. Clients can pay directly from the invoice page.</p>
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label>Razorpay Key ID</Label>
+                  <Input id="razorpayKeyId" placeholder="rzp_live_..." type="text" />
+                  <p className="text-xs text-gray-400">Your Razorpay Key ID (starts with rzp_live_ or rzp_test_)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Razorpay Key Secret</Label>
+                  <Input id="razorpayKeySecret" placeholder="Enter your secret key" type="password" />
+                  <p className="text-xs text-gray-400">Your Razorpay Key Secret — stored securely</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="razorpayEnabled" className="rounded" />
+                  <Label htmlFor="razorpayEnabled" className="text-sm">Enable online payments</Label>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <Button id="saveRazorpaySettings" onClick={async () => {
+                  const keyId = (document.getElementById('razorpayKeyId') as HTMLInputElement).value;
+                  const keySecret = (document.getElementById('razorpayKeySecret') as HTMLInputElement).value;
+                  const enabled = (document.getElementById('razorpayEnabled') as HTMLInputElement).checked;
+                  try {
+                    const { activeBusiness } = (await import('@/hooks/useAuth')).useAuth.getState();
+                    await api.put('/payments/settings/' + activeBusiness?.id, { razorpayKeyId: keyId, razorpayKeySecret: keySecret, razorpayEnabled: enabled });
+                    toast.success('Payment settings saved!');
+                  } catch { toast.error('Failed to save settings'); }
+                }}>
+                  <Save size={16} className="mr-2" /> Save Settings
+                </Button>
+                <span id="razorpayStatus" className="text-xs text-gray-400 flex items-center gap-1">
+                  <Check size={12} className="text-green-500" /> Configure to enable "Pay Now" on invoices
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
