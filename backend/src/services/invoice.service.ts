@@ -320,6 +320,7 @@ export async function getInvoiceStats(userId: string, businessId: string) {
     overdueCount,
     paidCount,
     draftCount,
+    recentInvoices,
   ] = await Promise.all([
     prisma.invoice.count({ where: { userId, businessId, deletedAt: null } }),
     prisma.invoice.count({
@@ -357,6 +358,12 @@ export async function getInvoiceStats(userId: string, businessId: string) {
     prisma.invoice.count({
       where: { userId, businessId, deletedAt: null, status: 'Draft' },
     }),
+    prisma.invoice.findMany({
+      where: { userId, businessId, deletedAt: null },
+      include: { client: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
   ]);
 
   return {
@@ -368,5 +375,6 @@ export async function getInvoiceStats(userId: string, businessId: string) {
     overdueCount,
     paidCount,
     draftCount,
+    recentInvoices,
   };
 }

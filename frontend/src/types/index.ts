@@ -130,6 +130,35 @@ export interface IClient {
   deletedAt?: string;
 }
 
+// ─── Products ─────────────────────────────────────────────
+export interface IProduct {
+  id: string;
+  userId: string;
+  businessId: string;
+  name: string;
+  sku?: string;
+  hsnCode?: string;
+  description?: string;
+  unitPrice: number;
+  taxRate: number;
+  category?: string;
+  createdAt: string;
+  deletedAt?: string;
+}
+
+// ─── Services ─────────────────────────────────────────────
+export interface IService {
+  id: string;
+  userId: string;
+  businessId: string;
+  name: string;
+  description?: string;
+  hourlyRate?: number;
+  fixedRate?: number;
+  createdAt: string;
+  deletedAt?: string;
+}
+
 // ─── Line Items ────────────────────────────────────────────
 export interface ILineItem {
   id?: string;

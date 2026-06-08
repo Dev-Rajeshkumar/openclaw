@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, FileText, Users, Settings, LogOut,
   Menu, X, ChevronDown, Building2, Plus, Activity, Receipt,
-  ClipboardList, Repeat, CreditCard, Bell, BarChart3, UserCog, FolderOpen,
+  ClipboardList, Repeat, CreditCard, Bell, BarChart3, UserCog, FolderOpen, Package,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -24,6 +24,7 @@ const navItems = [
   { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
   { href: '/dashboard/team', label: 'Team', icon: UserCog },
   { href: '/dashboard/files', label: 'Files', icon: FolderOpen },
+  { href: '/dashboard/products', label: 'Products', icon: Package },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
