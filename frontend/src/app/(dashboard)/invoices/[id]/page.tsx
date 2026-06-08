@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette } from 'lucide-react';
-import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, SubscriptionPlan } from '@/types';
+import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2 } from 'lucide-react';
+import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, ITemplateTextOverrides, SubscriptionPlan } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -11,30 +11,31 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TemplateTextEditor } from '@/components/TemplateTextEditor';
 
 const ALL_TEMPLATES: IInvoiceTemplate[] = [
-  { id: 'builtin_classic', name: 'Classic', slug: 'classic', description: 'Traditional layout', isBuiltIn: true, layout: { primaryColor: '#1a1a2e', accentColor: '#e94560', fontFamily: 'Helvetica', headerStyle: 'left-aligned', tableStyle: 'bordered', footerText: 'Thank you!', tier: '' } },
-  { id: 'builtin_modern', name: 'Modern', slug: 'modern', description: 'Bold header with accents', isBuiltIn: true, layout: { primaryColor: '#6366f1', accentColor: '#818cf8', fontFamily: 'Helvetica', headerStyle: 'full-width-banner', tableStyle: 'striped', footerText: 'Thank you!', tier: '' } },
-  { id: 'builtin_minimal', name: 'Minimal', slug: 'minimal', description: 'Clean and minimal', isBuiltIn: true, layout: { primaryColor: '#111827', accentColor: '#6b7280', fontFamily: 'Helvetica', headerStyle: 'minimal', tableStyle: 'simple', footerText: '', tier: '' } },
-  { id: 'builtin_professional', name: 'Professional', slug: 'professional', description: 'Corporate style', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0f172a', accentColor: '#0ea5e9', fontFamily: 'Helvetica', headerStyle: 'two-column', tableStyle: 'detailed', footerText: '', tier: 'starter' } },
-  { id: 'builtin_elegant', name: 'Elegant', slug: 'elegant', description: 'Sophisticated design', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#7c3aed', accentColor: '#a78bfa', fontFamily: 'Helvetica', headerStyle: 'centered', tableStyle: 'elegant', footerText: '', tier: 'starter' } },
-  { id: 'builtin_bold', name: 'Bold', slug: 'bold', description: 'High-contrast dark theme', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#000000', accentColor: '#f59e0b', fontFamily: 'Helvetica', headerStyle: 'full-bleed-dark', tableStyle: 'minimal-dark', footerText: '', tier: 'starter' } },
-  { id: 'builtin_gradient-blue', name: 'Gradient Blue', slug: 'gradient-blue', description: 'Smooth blue gradient', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#2563eb', accentColor: '#3b82f6', fontFamily: 'Helvetica', headerStyle: 'gradient-banner', tableStyle: 'clean', footerText: '', tier: 'professional' } },
-  { id: 'builtin_forest-green', name: 'Forest Green', slug: 'forest-green', description: 'Nature-inspired green', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#166534', accentColor: '#22c55e', fontFamily: 'Helvetica', headerStyle: 'left-accent-bar', tableStyle: 'soft-rows', footerText: '', tier: 'professional' } },
-  { id: 'builtin_sunset-orange', name: 'Sunset Orange', slug: 'sunset-orange', description: 'Warm sunset gradient', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#ea580c', accentColor: '#fb923c', fontFamily: 'Helvetica', headerStyle: 'warm-banner', tableStyle: 'striped-warm', footerText: '', tier: 'professional' } },
-  { id: 'builtin_rose-gold', name: 'Rose Gold', slug: 'rose-gold', description: 'Luxurious rose gold', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#9f1239', accentColor: '#fb7185', fontFamily: 'Helvetica', headerStyle: 'luxury-centered', tableStyle: 'refined', footerText: '', tier: 'professional' } },
-  { id: 'builtin_tech-cyan', name: 'Tech Cyan', slug: 'tech-cyan', description: 'Futuristic tech style', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0e7490', accentColor: '#22d3ee', fontFamily: 'Helvetica', headerStyle: 'tech-block', tableStyle: 'grid-lines', footerText: '', tier: 'professional' } },
-  { id: 'builtin_arctic-white', name: 'Arctic White', slug: 'arctic-white', description: 'Ultra-clean white', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#1e40af', accentColor: '#93c5fd', fontFamily: 'Helvetica', headerStyle: 'frost-header', tableStyle: 'airy', footerText: '', tier: 'professional' } },
-  { id: 'builtin_midnight-purple', name: 'Midnight Purple', slug: 'midnight-purple', description: 'Deep purple executive', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#3b0764', accentColor: '#d97706', fontFamily: 'Helvetica', headerStyle: 'executive-dark', tableStyle: 'executive-table', footerText: '', tier: 'business' } },
-  { id: 'builtin_coral-reef', name: 'Coral Reef', slug: 'coral-reef', description: 'Vibrant coral and teal', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0d9488', accentColor: '#f472b6', fontFamily: 'Helvetica', headerStyle: 'dual-tone', tableStyle: 'colorful-rows', footerText: '', tier: 'business' } },
-  { id: 'builtin_slate-pro', name: 'Slate Pro', slug: 'slate-pro', description: 'Ultra-professional slate', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#334155', accentColor: '#475569', fontFamily: 'Helvetica', headerStyle: 'sharp-minimal', tableStyle: 'compact-grid', footerText: '', tier: 'business' } },
-  { id: 'builtin_espresso', name: 'Espresso', slug: 'espresso', description: 'Rich brown tones', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#78350f', accentColor: '#d97706', fontFamily: 'Helvetica', headerStyle: 'warm-cream', tableStyle: 'cream-rows', footerText: '', tier: 'business' } },
-  { id: 'builtin_neon-edge', name: 'Neon Edge', slug: 'neon-edge', description: 'Dark with neon accents', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#18181b', accentColor: '#a3e635', fontFamily: 'Helvetica', headerStyle: 'neon-dark', tableStyle: 'neon-grid', footerText: '', tier: 'business' } },
-  { id: 'builtin_ocean-breeze', name: 'Ocean Breeze', slug: 'ocean-breeze', description: 'Calming ocean blue', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0369a1', accentColor: '#67e8f9', fontFamily: 'Helvetica', headerStyle: 'aqua-wave', tableStyle: 'flowing-rows', footerText: '', tier: 'business' } },
-  { id: 'builtin_cherry-blossom', name: 'Cherry Blossom', slug: 'cherry-blossom', description: 'Delicate pink palette', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#be185d', accentColor: '#fda4af', fontFamily: 'Helvetica', headerStyle: 'sakura-header', tableStyle: 'delicate-rows', footerText: '', tier: 'business' } },
-  { id: 'builtin_gunmetal', name: 'Gunmetal', slug: 'gunmetal', description: 'Industrial dark theme', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#1c1917', accentColor: '#b45309', fontFamily: 'Helvetica', headerStyle: 'industrial-header', tableStyle: 'solid-grid', footerText: '', tier: 'business' } },
-  { id: 'builtin_lavender-dreams', name: 'Lavender Dreams', slug: 'lavender-dreams', description: 'Soft lavender palette', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#6d28d9', accentColor: '#c4b5fd', fontFamily: 'Helvetica', headerStyle: 'soft-gradient', tableStyle: 'gentle-rows', footerText: '', tier: 'business' } },
-  { id: 'builtin_monochrome', name: 'Monochrome', slug: 'monochrome', description: 'Pure black and white', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#000000', accentColor: '#525252', fontFamily: 'Helvetica', headerStyle: 'bw-header', tableStyle: 'bw-table', footerText: '', tier: 'business' } },
+  { id: 'builtin_classic', name: 'Classic', slug: 'classic', description: 'Split header, bordered table', isBuiltIn: true, layout: { primaryColor: '#1a1a2e', accentColor: '#e94560', fontFamily: 'Helvetica', headerStyle: 'split-left-right', tableStyle: 'bordered-rows', footerText: 'Thank you!', labelInvoiceTitle: 'TAX INVOICE', labelBillTo: 'Bill To:', labelNotes: 'Notes:', labelTerms: 'Terms & Conditions:', labelSubtotal: 'Subtotal:', labelDiscount: 'Discount:', labelTax: 'Tax:', labelTotal: 'Total:', tier: '' } },
+  { id: 'builtin_modern', name: 'Modern', slug: 'modern', description: 'Full banner, striped rows', isBuiltIn: true, layout: { primaryColor: '#6366f1', accentColor: '#818cf8', fontFamily: 'Helvetica', headerStyle: 'full-banner', tableStyle: 'striped', footerText: 'Thank you!', labelInvoiceTitle: 'INVOICE', labelBillTo: 'BILL TO', labelNotes: 'Notes', labelTerms: 'Terms & Conditions', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'TOTAL', tier: '' } },
+  { id: 'builtin_minimal', name: 'Minimal', slug: 'minimal', description: 'Giant faded number, no borders', isBuiltIn: true, layout: { primaryColor: '#111827', accentColor: '#6b7280', fontFamily: 'Helvetica', headerStyle: 'minimal-faded-number', tableStyle: 'no-borders', footerText: '', labelInvoiceTitle: '', labelBillTo: 'To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total', tier: '' } },
+  { id: 'builtin_professional', name: 'Professional', slug: 'professional', description: 'Accent bar, two-col, 9-col table', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0f172a', accentColor: '#0ea5e9', fontFamily: 'Helvetica', headerStyle: 'accent-bar-two-col', tableStyle: 'detailed-grid', footerText: 'Payment is due within the specified terms.', labelInvoiceTitle: 'INVOICE', labelBillTo: 'BILL TO', labelNotes: 'Notes', labelTerms: 'Terms & Conditions', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'TOTAL DUE', tier: 'starter' } },
+  { id: 'builtin_elegant', name: 'Elegant', slug: 'elegant', description: 'Centered, decorative line', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#7c3aed', accentColor: '#a78bfa', fontFamily: 'Helvetica', headerStyle: 'centered-decorative', tableStyle: 'double-line-header', footerText: 'We appreciate your continued trust.', labelInvoiceTitle: 'Invoice', labelBillTo: 'Billed To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total', tier: 'starter' } },
+  { id: 'builtin_bold', name: 'Bold', slug: 'bold', description: 'Full-bleed dark, gold accents', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#000000', accentColor: '#f59e0b', fontFamily: 'Helvetica', headerStyle: 'full-bleed-dark', tableStyle: 'dark-minimal', footerText: 'We value your business!', labelInvoiceTitle: 'INVOICE', labelBillTo: 'BILL TO', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'TOTAL', tier: 'starter' } },
+  { id: 'builtin_gradient-blue', name: 'Gradient Blue', slug: 'gradient-blue', description: 'Blue gradient header', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#2563eb', accentColor: '#93c5fd', fontFamily: 'Helvetica', headerStyle: 'gradient-banner', tableStyle: 'clean-white', footerText: 'Thank you for choosing us!', labelInvoiceTitle: 'INVOICE', labelBillTo: 'Bill To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total Due', tier: 'professional' } },
+  { id: 'builtin_forest-green', name: 'Forest Green', slug: 'forest-green', description: 'Left accent bar, green rows', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#166534', accentColor: '#22c55e', fontFamily: 'Helvetica', headerStyle: 'left-accent-bar', tableStyle: 'tinted-rows', footerText: 'Growing together with our clients.', labelInvoiceTitle: 'INVOICE', labelBillTo: 'Bill To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'TOTAL', tier: 'professional' } },
+  { id: 'builtin_sunset-orange', name: 'Sunset Orange', slug: 'sunset-orange', description: 'Warm orange, cream body', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#ea580c', accentColor: '#fed7aa', fontFamily: 'Helvetica', headerStyle: 'warm-banner', tableStyle: 'cream-rows', footerText: 'Your success is our priority!', labelInvoiceTitle: 'INVOICE', labelBillTo: 'Bill To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total', tier: 'professional' } },
+  { id: 'builtin_rose-gold', name: 'Rose Gold', slug: 'rose-gold', description: 'Deep rose, luxury spacing', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#9f1239', accentColor: '#fda4af', fontFamily: 'Helvetica', headerStyle: 'luxury-rose', tableStyle: 'refined-rows', footerText: 'Crafted with care for our valued clients.', labelInvoiceTitle: 'Invoice', labelBillTo: 'Billed To', labelNotes: 'Notes', labelTerms: 'Terms & Conditions', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total Amount', tier: 'professional' } },
+  { id: 'builtin_tech-cyan', name: 'Tech Cyan', slug: 'tech-cyan', description: 'Dark slate, cyan blocks', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0e7490', accentColor: '#22d3ee', fontFamily: 'Helvetica', headerStyle: 'tech-blocks', tableStyle: 'grid-lines', footerText: 'Innovation delivered, satisfaction guaranteed.', labelInvoiceTitle: 'INVOICE', labelBillTo: 'CLIENT', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Disc', labelTax: 'Tax', labelTotal: 'TOTAL', tier: 'professional' } },
+  { id: 'builtin_arctic-white', name: 'Arctic White', slug: 'arctic-white', description: 'Frost blue strip, airy', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#1e40af', accentColor: '#dbeafe', fontFamily: 'Helvetica', headerStyle: 'frost-strip', tableStyle: 'airy-minimal', footerText: 'Crystal clear billing, every time.', labelInvoiceTitle: 'Invoice', labelBillTo: 'To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total', tier: 'professional' } },
+  { id: 'builtin_midnight-purple', name: 'Midnight Purple', slug: 'midnight-purple', description: 'Deep purple, gold trim', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#3b0764', accentColor: '#d97706', fontFamily: 'Helvetica', headerStyle: 'executive-purple', tableStyle: 'executive-grid', footerText: 'Excellence in every detail.', labelInvoiceTitle: 'INVOICE', labelBillTo: 'Bill To', labelNotes: 'Notes', labelTerms: 'Terms & Conditions', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total Due', tier: 'business' } },
+  { id: 'builtin_coral-reef', name: 'Coral Reef', slug: 'coral-reef', description: 'Dual-tone teal/pink', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0d9488', accentColor: '#f472b6', fontFamily: 'Helvetica', headerStyle: 'dual-tone-split', tableStyle: 'colorful-rounded', footerText: 'Making business a pleasure!', labelInvoiceTitle: 'Invoice', labelBillTo: 'Hello', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total', tier: 'business' } },
+  { id: 'builtin_slate-pro', name: 'Slate Pro', slug: 'slate-pro', description: 'Sharp slate, compact grid', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#334155', accentColor: '#94a3b8', fontFamily: 'Helvetica', headerStyle: 'sharp-slate', tableStyle: 'compact-grid', footerText: 'Precision billing for modern businesses.', labelInvoiceTitle: 'INVOICE', labelBillTo: 'Bill To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'TOTAL', tier: 'business' } },
+  { id: 'builtin_espresso', name: 'Espresso', slug: 'espresso', description: 'Rich brown, cream body', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#78350f', accentColor: '#fbbf24', fontFamily: 'Helvetica', headerStyle: 'warm-espresso', tableStyle: 'cream-table', footerText: 'Brewed to perfection for your business.', labelInvoiceTitle: 'INVOICE', labelBillTo: 'Bill To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total', tier: 'business' } },
+  { id: 'builtin_neon-edge', name: 'Neon Edge', slug: 'neon-edge', description: 'Dark header, neon lime', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#18181b', accentColor: '#a3e635', fontFamily: 'Helvetica', headerStyle: 'neon-dark', tableStyle: 'neon-grid', footerText: 'Disrupting invoicing, one invoice at a time.', labelInvoiceTitle: 'INVOICE', labelBillTo: 'CLIENT', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Disc', labelTax: 'Tax', labelTotal: 'TOTAL DUE', tier: 'business' } },
+  { id: 'builtin_ocean-breeze', name: 'Ocean Breeze', slug: 'ocean-breeze', description: 'Aqua wave header', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0369a1', accentColor: '#67e8f9', fontFamily: 'Helvetica', headerStyle: 'aqua-wave', tableStyle: 'flowing-rows', footerText: 'Smooth sailing with every transaction.', labelInvoiceTitle: 'Invoice', labelBillTo: 'Bill To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total', tier: 'business' } },
+  { id: 'builtin_cherry-blossom', name: 'Cherry Blossom', slug: 'cherry-blossom', description: 'Pink sakura, Japanese aesthetic', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#be185d', accentColor: '#fce7f3', fontFamily: 'Helvetica', headerStyle: 'sakura-header', tableStyle: 'delicate-rows', footerText: 'Beauty in every detail.', labelInvoiceTitle: 'Invoice', labelBillTo: 'Dear Client', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total Amount', tier: 'business' } },
+  { id: 'builtin_gunmetal', name: 'Gunmetal', slug: 'gunmetal', description: 'Industrial dark, copper', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#1c1917', accentColor: '#f59e0b', fontFamily: 'Helvetica', headerStyle: 'industrial-gunmetal', tableStyle: 'solid-grid', footerText: 'Built strong. Billed right.', labelInvoiceTitle: 'INVOICE', labelBillTo: 'Bill To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'TOTAL', tier: 'business' } },
+  { id: 'builtin_lavender-dreams', name: 'Lavender Dreams', slug: 'lavender-dreams', description: 'Soft purple gradient', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#6d28d9', accentColor: '#ddd6fe', fontFamily: 'Helvetica', headerStyle: 'soft-lavender', tableStyle: 'gentle-rows', footerText: 'Care in every transaction.', labelInvoiceTitle: 'Invoice', labelBillTo: 'Valued Client', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'Total', tier: 'business' } },
+  { id: 'builtin_monochrome', name: 'Monochrome', slug: 'monochrome', description: 'Pure B&W, max contrast', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#000000', accentColor: '#525252', fontFamily: 'Helvetica', headerStyle: 'bw-sharp', tableStyle: 'bw-table', footerText: 'Simplicity is the ultimate sophistication.', labelInvoiceTitle: 'INVOICE', labelBillTo: 'Bill To', labelNotes: 'Notes', labelTerms: 'Terms', labelSubtotal: 'Subtotal', labelDiscount: 'Discount', labelTax: 'Tax', labelTotal: 'TOTAL', tier: 'business' } },
 ];
 
 export default function InvoiceDetailPage() {
@@ -47,6 +48,9 @@ export default function InvoiceDetailPage() {
   const [showStatusLog, setShowStatusLog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
   const [userPlan, setUserPlan] = useState<string>('Free');
+  const [showTextEditor, setShowTextEditor] = useState(false);
+  const [textOverrides, setTextOverrides] = useState<ITemplateTextOverrides>({});
+  const isPremium = userPlan === SubscriptionPlan.Professional || userPlan === SubscriptionPlan.Business;
 
   const availableTemplates = useMemo(() => {
     if (userPlan === SubscriptionPlan.Business) return ALL_TEMPLATES;
@@ -55,23 +59,22 @@ export default function InvoiceDetailPage() {
     return ALL_TEMPLATES.filter((t) => !t.isPremium);
   }, [userPlan]);
 
+  const selectedTemplateObj = ALL_TEMPLATES.find((t) => t.slug === selectedTemplate) || null;
+
   useEffect(() => {
     const init = async () => {
       try {
         const { data } = await api.get(`/invoices/${id}`);
         if (data.success && data.data) {
           setInvoice(data.data as IInvoice);
-          setSelectedTemplate(data.data.invoiceTemplateId || 'classic');
+          setSelectedTemplate((data.data as IInvoice).invoiceTemplateId || 'classic');
+          setTextOverrides((data.data as any).templateTextOverrides || {});
         }
       } catch { toast.error('Failed to load invoice'); }
-
       try {
         const { data: bizData } = await api.get('/businesses');
-        if (bizData.success && bizData.data && bizData.data.length > 0) {
-          setUserPlan(bizData.data[0].plan || 'Free');
-        }
+        if (bizData.success && bizData.data && bizData.data.length > 0) setUserPlan(bizData.data[0].plan || 'Free');
       } catch { /* ignore */ }
-
       setLoading(false);
     };
     init();
@@ -106,7 +109,14 @@ export default function InvoiceDetailPage() {
   const handleDownloadPDF = () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
     const businessId = invoice?.businessId || '';
-    window.open(`${apiUrl}/v1/businesses/${businessId}/invoices/${id}/pdf?template=${selectedTemplate}`, '_blank');
+    let url = `${apiUrl}/v1/businesses/${businessId}/invoices/${id}/pdf?template=${selectedTemplate}`;
+    // Append text overrides as query params for premium users
+    if (isPremium && Object.keys(textOverrides).length > 0) {
+      const params = new URLSearchParams();
+      Object.entries(textOverrides).forEach(([k, v]) => { if (v) params.set(k, v); });
+      url += `&${params.toString()}`;
+    }
+    window.open(url, '_blank');
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" /></div>;
@@ -126,15 +136,9 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {invoice.status === InvoiceStatus.DRAFT && (
-            <Button onClick={() => handleStatusChange(InvoiceStatus.Sent)} disabled={actionLoading} variant="outline" size="sm"><Send size={14} className="mr-1" /> Mark Sent</Button>
-          )}
-          {(invoice.status === InvoiceStatus.Sent || invoice.status === InvoiceStatus.Overdue || invoice.status === InvoiceStatus.PartiallyPaid) && (
-            <Button onClick={handleRecordPayment} disabled={actionLoading} className="bg-green-600 hover:bg-green-700" size="sm"><CheckCircle size={14} className="mr-1" /> Record Payment</Button>
-          )}
-          {invoice.client?.email && (
-            <Button onClick={async () => { setActionLoading(true); try { await api.post(`/invoices/${invoice.id}/send-email`); toast.success(`Sent to ${invoice.client?.email}`); } catch { toast.error('Failed'); } finally { setActionLoading(false); } }} disabled={actionLoading} variant="outline" size="sm"><Mail size={14} className="mr-1" /> Email</Button>
-          )}
+          {invoice.status === InvoiceStatus.DRAFT && (<Button onClick={() => handleStatusChange(InvoiceStatus.Sent)} disabled={actionLoading} variant="outline" size="sm"><Send size={14} className="mr-1" /> Mark Sent</Button>)}
+          {(invoice.status === InvoiceStatus.Sent || invoice.status === InvoiceStatus.Overdue || invoice.status === InvoiceStatus.PartiallyPaid) && (<Button onClick={handleRecordPayment} disabled={actionLoading} className="bg-green-600 hover:bg-green-700" size="sm"><CheckCircle size={14} className="mr-1" /> Record Payment</Button>)}
+          {invoice.client?.email && (<Button onClick={async () => { setActionLoading(true); try { await api.post(`/invoices/${invoice.id}/send-email`); toast.success(`Sent to ${invoice.client?.email}`); } catch { toast.error('Failed'); } finally { setActionLoading(false); } }} disabled={actionLoading} variant="outline" size="sm"><Mail size={14} className="mr-1" /> Email</Button>)}
           <Button onClick={handleDownloadPDF} disabled={actionLoading} variant="outline" size="sm"><Download size={14} className="mr-1" /> PDF</Button>
           <Button onClick={handleDelete} disabled={actionLoading} variant="destructive" size="sm"><Trash2 size={14} className="mr-1" /> Delete</Button>
         </div>
@@ -151,12 +155,15 @@ export default function InvoiceDetailPage() {
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
               <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {availableTemplates.map((t) => (
-                  <SelectItem key={t.slug} value={t.slug}>{t.name}</SelectItem>
-                ))}
+                {availableTemplates.map((t) => (<SelectItem key={t.slug} value={t.slug}>{t.name}</SelectItem>))}
               </SelectContent>
             </Select>
             <Button onClick={handleDownloadPDF} variant="outline" size="sm"><Download size={14} className="mr-1" /> Download</Button>
+            {isPremium && selectedTemplateObj && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowTextEditor(true)} className="gap-1 text-amber-600">
+                <Settings2 size={14} /> Customize Text
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -166,14 +173,12 @@ export default function InvoiceDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-2">Bill To</h3>
-              {invoice.client ? (
-                <>
-                  <p className="font-semibold text-gray-900">{invoice.client.name}</p>
-                  {invoice.client.email && <p className="text-sm text-gray-500">{invoice.client.email}</p>}
-                  {invoice.client.phone && <p className="text-sm text-gray-500">{invoice.client.phone}</p>}
-                  {invoice.client.gstNumber && <p className="text-sm text-gray-500">GST: {invoice.client.gstNumber}</p>}
-                </>
-              ) : <p className="text-gray-400">No client assigned</p>}
+              {invoice.client ? (<>
+                <p className="font-semibold text-gray-900">{invoice.client.name}</p>
+                {invoice.client.email && <p className="text-sm text-gray-500">{invoice.client.email}</p>}
+                {invoice.client.phone && <p className="text-sm text-gray-500">{invoice.client.phone}</p>}
+                {invoice.client.gstNumber && <p className="text-sm text-gray-500">GST: {invoice.client.gstNumber}</p>}
+              </>) : <p className="text-gray-400">No client assigned</p>}
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div><p className="text-sm text-gray-500">Number</p><p className="font-semibold text-gray-900">{invoice.invoiceNumber}</p></div>
@@ -207,12 +212,7 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
 
-          {invoice.notes && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-gray-500 mb-1">Notes</p>
-              <p className="text-sm text-gray-700">{invoice.notes}</p>
-            </div>
-          )}
+          {invoice.notes && (<div className="mt-6 p-4 bg-gray-50 rounded-lg"><p className="text-sm font-medium text-gray-500 mb-1">Notes</p><p className="text-sm text-gray-700">{invoice.notes}</p></div>)}
         </CardContent>
       </Card>
 
@@ -248,6 +248,17 @@ export default function InvoiceDetailPage() {
             ) : <p className="text-gray-400 text-sm">No status history yet</p>}
           </CardContent>
         </Card>
+      )}
+
+      {/* Template Text Editor Modal */}
+      {showTextEditor && selectedTemplateObj && (
+        <TemplateTextEditor
+          template={selectedTemplateObj}
+          overrides={textOverrides}
+          onSave={(overrides) => { setTextOverrides(overrides); setShowTextEditor(false); toast.success('Template text customized for this PDF!'); }}
+          onClose={() => setShowTextEditor(false)}
+          isPremium={isPremium}
+        />
       )}
     </div>
   );

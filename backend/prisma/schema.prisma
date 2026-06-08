@@ -180,6 +180,7 @@ model Invoice {
   total          Float
   status         InvoiceStatus   @default(Draft)
   invoiceTemplateId String?    @db.ObjectId
+  templateTextOverrides Json?
   notes          String?
   terms          String?
   deletedAt      DateTime?

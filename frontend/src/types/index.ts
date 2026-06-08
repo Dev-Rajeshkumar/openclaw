@@ -193,6 +193,7 @@ export interface IInvoice {
   total: number;
   status: InvoiceStatus;
   invoiceTemplateId?: string;
+  templateTextOverrides?: ITemplateTextOverrides;
   notes?: string;
   terms?: string;
   payments?: IPayment[];
@@ -366,6 +367,18 @@ export interface IFile {
 }
 
 // ─── Invoice Templates ────────────────────────────────────
+export interface ITemplateTextOverrides {
+  labelInvoiceTitle?: string;
+  labelBillTo?: string;
+  labelNotes?: string;
+  labelTerms?: string;
+  labelSubtotal?: string;
+  labelDiscount?: string;
+  labelTax?: string;
+  labelTotal?: string;
+  footerText?: string;
+}
+
 export interface IInvoiceTemplate {
   id: string;
   name: string;
@@ -381,6 +394,16 @@ export interface IInvoiceTemplate {
     headerStyle: string;
     tableStyle: string;
     footerText: string;
+    category?: string;
+    tier?: string;
+    labelInvoiceTitle?: string;
+    labelBillTo?: string;
+    labelNotes?: string;
+    labelTerms?: string;
+    labelSubtotal?: string;
+    labelDiscount?: string;
+    labelTax?: string;
+    labelTotal?: string;
   };
   createdAt?: string;
 }

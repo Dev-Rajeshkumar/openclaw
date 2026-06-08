@@ -177,6 +177,19 @@ export const downloadPDF = async (
       }
     }
 
+    // Merge text overrides: per-invoice stored overrides + query param overrides (premium)
+    const storedOverrides = (invoice as any).templateTextOverrides || {};
+    const queryOverrides: Record<string, string> = {};
+    const textKeys = ['labelInvoiceTitle','labelBillTo','labelNotes','labelTerms','labelSubtotal','labelDiscount','labelTax','labelTotal','footerText'];
+    textKeys.forEach((k) => {
+      const v = req.query[k];
+      if (typeof v === 'string' && v) queryOverrides[k] = v;
+    });
+    const mergedOverrides = { ...storedOverrides, ...queryOverrides };
+    if (Object.keys(mergedOverrides).length > 0) {
+      template = templateService.mergeTemplateTextOverrides(template, mergedOverrides);
+    }
+
     const doc = generateInvoicePDF({
       invoice: invoice as any,
       client: invoice.client || ({} as any),

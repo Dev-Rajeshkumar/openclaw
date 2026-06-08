@@ -4,10 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader2, Settings2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTemplateStore } from '@/stores/templateStore';
 import { invoiceSchema, InvoiceFormData } from '@/lib/validations';
-import { IClient } from '@/types';
+import { IClient, ITemplateTextOverrides, SubscriptionPlan } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,13 +19,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TemplateSelector } from '@/components/TemplateSelector';
+import { TemplateTextEditor } from '@/components/TemplateTextEditor';
 
 export default function NewInvoicePage() {
   const router = useRouter();
   const { activeBusiness } = useAuth();
+  const { templates: storeTemplates } = useTemplateStore();
   const [clients, setClients] = useState<IClient[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
+  const [textOverrides, setTextOverrides] = useState<ITemplateTextOverrides>({});
+  const [showTextEditor, setShowTextEditor] = useState(false);
+  const isPremium = activeBusiness?.plan === SubscriptionPlan.Professional || activeBusiness?.plan === SubscriptionPlan.Business;
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
@@ -44,10 +50,17 @@ export default function NewInvoicePage() {
     });
   }, []);
 
+  const handleTemplateChange = useCallback((slug: string) => {
+    setSelectedTemplate(slug);
+    setTextOverrides({});
+  }, []);
+
+  const selectedTemplateObj = storeTemplates.find((t) => t.slug === selectedTemplate) || null;
+
   const onSubmit = async (formData: InvoiceFormData) => {
     setIsSubmitting(true);
     try {
-      const payload = {
+      const payload: any = {
         ...formData,
         clientId: formData.clientId || undefined,
         invoiceTemplateId: selectedTemplate,
@@ -59,14 +72,14 @@ export default function NewInvoicePage() {
           amount: Number(item.quantity) * Number(item.rate),
         })),
       };
+      // Only include text overrides for premium users
+      if (isPremium && Object.keys(textOverrides).length > 0) {
+        payload.templateTextOverrides = textOverrides;
+      }
       const { data } = await api.post('/invoices', payload);
       if (data.success) { toast.success('Invoice created!'); router.push('/dashboard/invoices'); }
     } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed'); } finally { setIsSubmitting(false); }
   };
-
-  const handleTemplateChange = useCallback((slug: string) => {
-    setSelectedTemplate(slug);
-  }, []);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -76,11 +89,23 @@ export default function NewInvoicePage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Invoice Template */}
+        {/* Template selector */}
         <Card>
-          <CardHeader><CardTitle>Choose Template</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Choose Template</CardTitle>
+            {isPremium && selectedTemplateObj && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowTextEditor(true)} className="gap-1.5">
+                <Settings2 size={14} /> Customize Text
+              </Button>
+            )}
+          </CardHeader>
           <CardContent>
             <TemplateSelector value={selectedTemplate} onChange={handleTemplateChange} />
+            {!isPremium && (
+              <p className="text-[11px] text-amber-600 mt-2 flex items-center gap-1">
+                <Settings2 size={12} /> Upgrade to Professional to customize template text labels.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -158,6 +183,17 @@ export default function NewInvoicePage() {
           <Button type="submit" disabled={isSubmitting} className="order-1 sm:order-2">{isSubmitting ? <><Loader2 size={18} className="animate-spin mr-2" />Creating...</> : 'Create Invoice'}</Button>
         </div>
       </form>
+
+      {/* Template Text Editor Modal */}
+      {showTextEditor && selectedTemplateObj && (
+        <TemplateTextEditor
+          template={selectedTemplateObj}
+          overrides={textOverrides}
+          onSave={(overrides) => { setTextOverrides(overrides); setShowTextEditor(false); toast.success('Template text customized!'); }}
+          onClose={() => setShowTextEditor(false)}
+          isPremium={isPremium}
+        />
+      )}
     </div>
   );
 }

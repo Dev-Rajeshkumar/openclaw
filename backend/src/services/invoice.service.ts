@@ -17,6 +17,8 @@ export async function createInvoice(
     discountAmount?: number;
     notes?: string;
     terms?: string;
+    invoiceTemplateId?: string;
+    templateTextOverrides?: Record<string, string>;
   }
 ) {
   const user = await prisma.user.findUnique({
@@ -83,6 +85,8 @@ export async function createInvoice(
         status: InvoiceStatus.Draft,
         notes: data.notes,
         terms: data.terms,
+        invoiceTemplateId: data.invoiceTemplateId,
+        templateTextOverrides: data.templateTextOverrides as any,
         createdBy: userId,
       },
     });
