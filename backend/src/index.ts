@@ -8,6 +8,7 @@ import { generalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { activityLogger } from './middleware/activityLogger.js';
 import { sendDiscordNotification } from './services/notification.service.js';
+import { processRecurringInvoices } from './jobs/recurringInvoice.job.js';
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
@@ -85,6 +86,26 @@ app.use(activityLogger);
 // ─── Error Handling ─────────────────────────────────────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
+
+// ─── Cron Jobs ────────────────────────────────────────────────────
+// Run recurring invoice processor every hour
+if (config.env !== 'test') {
+  setInterval(async () => {
+    try {
+      const result = await processRecurringInvoices();
+      if (result.processed > 0) {
+        console.log(`[Cron] Processed ${result.processed} recurring invoices`);
+      }
+    } catch (error) {
+      console.error('[Cron] Recurring invoice job failed:', error);
+    }
+  }, 60 * 60 * 1000); // Every hour
+
+  // Run once on startup after 30 seconds
+  setTimeout(() => {
+    processRecurringInvoices().catch(console.error);
+  }, 30000);
+}
 
 // ─── Start Server ───────────────────────────────────────────────────
 const server = app.listen(config.port, () => {

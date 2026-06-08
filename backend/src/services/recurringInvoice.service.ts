@@ -25,7 +25,7 @@ export async function createRecurringInvoice(
   }
 
   if (!canPerformAction(user.plan as Plan, 'canUseRecurring')) {
-    throw new AppError('Recurring invoices require Professional plan or higher', 403);
+    throw new AppError('Recurring invoices require Professional plan or higher. Upgrade your plan to use this feature.', 403);
   }
 
   const recurring = await prisma.recurringInvoice.create({
