@@ -28,6 +28,7 @@ import activityLogRoutes from './routes/activityLog.routes.js';
 import statusLogRoutes from './routes/statusLog.routes.js';
 import productRoutes from './routes/product.routes.js';
 import gstRoutes from './routes/gst.routes.js';
+import subscriptionRoutes from './routes/subscription.routes.js';
 
 const app = express();
 const API_PREFIX = `/api/${config.apiVersion}`;
@@ -81,6 +82,7 @@ app.use(`${API_PREFIX}/businesses/:businessId/files`, fileRoutes);
 app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/products`, productRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/gst`, gstRoutes);
+app.use(`${API_PREFIX}/subscriptions`, subscriptionRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/team`, teamRoutes);
 app.use(`${API_PREFIX}/activity-logs`, activityLogRoutes);
 app.use(`${API_PREFIX}/status-logs`, statusLogRoutes);
