@@ -220,6 +220,21 @@ export const remove = async (
   }
 };
 
+export const duplicateInvoice = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { id, businessId } = req.params;
+    const newInvoice = await invoiceService.duplicateInvoice(id, userId, businessId);
+    res.status(201).json(ApiResponse.created(newInvoice, 'Invoice duplicated successfully'));
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getStats = async (
   req: AuthenticatedRequest,
   res: Response,

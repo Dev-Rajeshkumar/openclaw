@@ -22,6 +22,7 @@ router.patch(
   validate(updateInvoiceStatusSchema),
   invoiceController.updateStatus
 );
+router.post('/:id/duplicate', invoiceController.duplicateInvoice);
 router.post('/:id/send-email', invoiceController.sendEmail);
 router.get('/:id/pdf', invoiceController.downloadPDF);
 router.delete('/:id', invoiceController.remove);

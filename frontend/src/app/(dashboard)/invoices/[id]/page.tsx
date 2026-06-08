@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye, CopyPlus } from 'lucide-react';
 import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, ITemplateTextOverrides, SubscriptionPlan } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
@@ -106,6 +106,15 @@ export default function InvoiceDetailPage() {
     } catch { toast.error('Failed'); } finally { setActionLoading(false); }
   };
 
+  const handleDuplicate = async () => {
+    if (!confirm('Duplicate this invoice? A new draft will be created.')) return;
+    setActionLoading(true);
+    try {
+      const { data } = await api.post(`/invoices/${id}/duplicate`);
+      if (data.success && data.data) { toast.success('Invoice duplicated!'); router.push(`/dashboard/invoices/${(data.data as any).id}`); }
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to duplicate'); } finally { setActionLoading(false); }
+  };
+
   const handleDownloadPDF = () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
     const businessId = invoice?.businessId || '';
@@ -139,6 +148,7 @@ export default function InvoiceDetailPage() {
           {invoice.status === InvoiceStatus.DRAFT && (<Button onClick={() => handleStatusChange(InvoiceStatus.Sent)} disabled={actionLoading} variant="outline" size="sm"><Send size={14} className="mr-1" /> Mark Sent</Button>)}
           {(invoice.status === InvoiceStatus.Sent || invoice.status === InvoiceStatus.Overdue || invoice.status === InvoiceStatus.PartiallyPaid) && (<Button onClick={handleRecordPayment} disabled={actionLoading} className="bg-green-600 hover:bg-green-700" size="sm"><CheckCircle size={14} className="mr-1" /> Record Payment</Button>)}
           {invoice.client?.email && (<Button onClick={async () => { setActionLoading(true); try { await api.post(`/invoices/${invoice.id}/send-email`); toast.success(`Sent to ${invoice.client?.email}`); } catch { toast.error('Failed'); } finally { setActionLoading(false); } }} disabled={actionLoading} variant="outline" size="sm"><Mail size={14} className="mr-1" /> Email</Button>)}
+          <Button onClick={handleDuplicate} disabled={actionLoading} variant="outline" size="sm"><CopyPlus size={14} className="mr-1" /> Duplicate</Button>
           <Button onClick={handleDownloadPDF} disabled={actionLoading} variant="outline" size="sm"><Download size={14} className="mr-1" /> PDF</Button>
           <Button onClick={handleDelete} disabled={actionLoading} variant="destructive" size="sm"><Trash2 size={14} className="mr-1" /> Delete</Button>
         </div>

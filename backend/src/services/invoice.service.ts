@@ -384,3 +384,74 @@ export async function getInvoiceStats(userId: string, businessId: string) {
     recentInvoices,
   };
 }
+
+export async function duplicateInvoice(
+  invoiceId: string,
+  userId: string,
+  businessId: string
+) {
+  const original = await prisma.invoice.findFirst({
+    where: { id: invoiceId, userId, deletedAt: null },
+    include: { client: true },
+  });
+
+  if (!original) {
+    throw new AppError('Invoice not found', 404);
+  }
+
+  // Get next invoice number
+  const business = await prisma.business.findFirst({
+    where: { id: businessId, deletedAt: null },
+  });
+
+  if (!business) {
+    throw new AppError('Business not found', 404);
+  }
+
+  const invoiceNumber = generateInvoiceNumber(
+    business.invoicePrefix,
+    business.nextInvoiceNo
+  );
+
+  const newInvoice = await prisma.$transaction(async (tx) => {
+    const inv = await tx.invoice.create({
+      data: {
+        userId,
+        businessId,
+        clientId: original.clientId,
+        invoiceNumber,
+        invoiceDate: new Date(),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        items: original.items as any,
+        subtotal: original.subtotal,
+        discountAmount: original.discountAmount,
+        taxAmount: original.taxAmount,
+        total: original.total,
+        status: InvoiceStatus.Draft,
+        notes: original.notes,
+        terms: original.terms,
+        invoiceTemplateId: original.invoiceTemplateId,
+        publicAccessToken: uuidv4(),
+        createdBy: userId,
+      },
+    });
+
+    await tx.business.update({
+      where: { id: businessId },
+      data: { nextInvoiceNo: { increment: 1 } },
+    });
+
+    return inv;
+  });
+
+  await logStatusChange({
+    entity: 'Invoice',
+    entityId: newInvoice.id,
+    action: 'CREATE',
+    newValue: InvoiceStatus.Draft,
+    description: `Invoice ${invoiceNumber} duplicated from ${original.invoiceNumber}`,
+    changedBy: userId,
+  });
+
+  return newInvoice;
+}
