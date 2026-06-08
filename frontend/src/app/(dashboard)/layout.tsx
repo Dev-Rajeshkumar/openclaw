@@ -8,6 +8,7 @@ import {
   ClipboardList, Repeat, CreditCard, Bell, BarChart3, UserCog, FolderOpen, Package,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { CommandPalette } from '@/components/CommandPalette';
 import { cn, formatCurrency } from '@/lib/utils';
 import { IBusiness } from '@/types';
 
@@ -110,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="sticky top-0 bg-white border-b border-gray-200 z-30">
           <div className="flex items-center justify-between px-4 py-3">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-gray-600 hover:text-gray-900"><Menu size={24} /></button>
-            <div className="flex-1" />
+            <div className="flex-1 max-w-md mx-4 hidden sm:block"><CommandPalette /></div>
             <div className="relative">
               <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-2 text-gray-700 hover:text-gray-900">
                 <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-semibold text-sm">{user.fullName.charAt(0).toUpperCase()}</div>
