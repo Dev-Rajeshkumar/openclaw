@@ -4,11 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowLeft, Loader2, Settings2 } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader2, Settings2, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTemplateStore } from '@/stores/templateStore';
 import { invoiceSchema, InvoiceFormData } from '@/lib/validations';
-import { IClient, ITemplateTextOverrides, SubscriptionPlan } from '@/types';
+import { IClient, IProduct, ITemplateTextOverrides, SubscriptionPlan } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,7 @@ export default function NewInvoicePage() {
   const { activeBusiness } = useAuth();
   const { templates: storeTemplates } = useTemplateStore();
   const [clients, setClients] = useState<IClient[]>([]);
+  const [products, setProducts] = useState<IProduct[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
   const [textOverrides, setTextOverrides] = useState<ITemplateTextOverrides>({});
@@ -47,6 +48,9 @@ export default function NewInvoicePage() {
   useEffect(() => {
     api.get('/clients?limit=100').then(({ data }) => {
       if (data.success && data.data) setClients(data.data as IClient[]);
+    });
+    api.get('/products?limit=100').then(({ data }) => {
+      if (data.success && data.data) setProducts(data.data as IProduct[]);
     });
   }, []);
 
@@ -145,7 +149,20 @@ export default function NewInvoicePage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between"><CardTitle>Line Items</CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', hsnCode: '', quantity: 1, rate: 0 })}><Plus size={14} className="mr-1" /> Add Item</Button>
+            <div className="flex items-center gap-2">
+              {products.length > 0 && (
+                <Select onValueChange={(val) => {
+                  const p = products.find((pr) => pr.id === val);
+                  if (p) append({ description: p.name, hsnCode: p.hsnCode || '', quantity: 1, rate: p.unitPrice });
+                }}>
+                  <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="+ Product" /></SelectTrigger>
+                  <SelectContent>
+                    {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} — {formatCurrency(p.unitPrice)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', hsnCode: '', quantity: 1, rate: 0 })}><Plus size={14} className="mr-1" /> Add Item</Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto -mx-6 px-6">
