@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import prisma from '../prisma/index.js';
 import * as invoiceService from '../services/invoice.service.js';
+import * as templateService from '../services/invoiceTemplate.service.js';
 import { generateInvoicePDF } from '../utils/pdf.js';
 import { sendInvoiceEmail } from '../utils/email.js';
 import { AuthenticatedRequest, InvoiceStatus } from '../types/index.js';
@@ -37,20 +38,10 @@ export const getAll = async (
     const endDate = req.query.endDate as string;
 
     const result = await invoiceService.getInvoices(
-      userId,
-      businessId,
-      page,
-      limit,
-      status,
-      search,
-      startDate,
-      endDate
+      userId, businessId, page, limit, status, search, startDate, endDate
     );
     res.status(200).json(ApiResponse.paginated(
-      result.invoices,
-      result.page,
-      result.limit,
-      result.total
+      result.invoices, result.page, result.limit, result.total
     ));
   } catch (error) {
     next(error);
@@ -97,9 +88,7 @@ export const updateStatus = async (
     const { id } = req.params;
     const { status } = req.body;
     const invoice = await invoiceService.updateInvoiceStatus(
-      id,
-      userId,
-      status as InvoiceStatus
+      id, userId, status as InvoiceStatus
     );
     res.status(200).json(ApiResponse.success(invoice, 'Invoice status updated'));
   } catch (error) {
@@ -151,7 +140,9 @@ export const downloadPDF = async (
 ) => {
   try {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const { id, businessId } = req.params;
+    const templateSlug = (req.query.template as string) || null;
+
     const invoice = await prisma.invoice.findFirst({
       where: { id, userId, deletedAt: null },
       include: { client: true },
@@ -163,10 +154,34 @@ export const downloadPDF = async (
     const business = await prisma.business.findFirst({
       where: { id: invoice.businessId, deletedAt: null },
     });
+
+    // Determine which template to use
+    let template = null;
+    if (templateSlug) {
+      try {
+        template = await templateService.getTemplateBySlug(templateSlug, userId, businessId);
+      } catch {
+        // Fall back to default
+      }
+    }
+    if (!template) {
+      // Use stored template or default
+      const defaultSlug = invoice.invoiceTemplateId
+        ? 'classic'
+        : await templateService.getDefaultTemplateSlug(businessId);
+      try {
+        template = await templateService.getTemplateBySlug(defaultSlug, userId, businessId);
+      } catch {
+        // Use classic as ultimate fallback
+        template = templateService.BUILT_IN_TEMPLATES[0];
+      }
+    }
+
     const doc = generateInvoicePDF({
       invoice: invoice as any,
       client: invoice.client || ({} as any),
       business: business || ({} as any),
+      template: template || undefined,
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.pdf"`);
