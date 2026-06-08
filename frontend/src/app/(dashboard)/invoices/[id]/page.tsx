@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye, CopyPlus } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye, CopyPlus, MessageCircle } from 'lucide-react';
 import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, ITemplateTextOverrides, SubscriptionPlan } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
@@ -115,6 +115,28 @@ export default function InvoiceDetailPage() {
     } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to duplicate'); } finally { setActionLoading(false); }
   };
 
+  const getPublicUrl = () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const token = (invoice as any)?.publicAccessToken;
+    return token ? `${origin}/i/${token}` : '';
+  };
+
+  const handleCopyLink = () => {
+    const url = getPublicUrl();
+    if (!url) { toast.error('Public link not available'); return; }
+    navigator.clipboard.writeText(url);
+    toast.success('Public link copied!');
+  };
+
+  const handleWhatsAppShare = () => {
+    const url = getPublicUrl();
+    if (!url) { toast.error('Public link not available'); return; }
+    const text = encodeURIComponent(
+      `Hi${invoice?.client?.name ? ' ' + invoice.client.name : ''}, here's your invoice ${invoice?.invoiceNumber} for ${formatCurrency(invoice?.total || 0)}. View it: ${url}`
+    );
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
   const handleDownloadPDF = () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
     const businessId = invoice?.businessId || '';
@@ -149,6 +171,12 @@ export default function InvoiceDetailPage() {
           {(invoice.status === InvoiceStatus.Sent || invoice.status === InvoiceStatus.Overdue || invoice.status === InvoiceStatus.PartiallyPaid) && (<Button onClick={handleRecordPayment} disabled={actionLoading} className="bg-green-600 hover:bg-green-700" size="sm"><CheckCircle size={14} className="mr-1" /> Record Payment</Button>)}
           {invoice.client?.email && (<Button onClick={async () => { setActionLoading(true); try { await api.post(`/invoices/${invoice.id}/send-email`); toast.success(`Sent to ${invoice.client?.email}`); } catch { toast.error('Failed'); } finally { setActionLoading(false); } }} disabled={actionLoading} variant="outline" size="sm"><Mail size={14} className="mr-1" /> Email</Button>)}
           <Button onClick={handleDuplicate} disabled={actionLoading} variant="outline" size="sm"><CopyPlus size={14} className="mr-1" /> Duplicate</Button>
+          {(invoice as any)?.publicAccessToken && (
+            <div className="flex items-center gap-1">
+              <Button onClick={handleCopyLink} variant="outline" size="sm"><Link size={14} className="mr-1" /> Copy Link</Button>
+              <Button onClick={handleWhatsAppShare} variant="outline" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50"><MessageCircle size={14} className="mr-1" /> WhatsApp</Button>
+            </div>
+          )}
           <Button onClick={handleDownloadPDF} disabled={actionLoading} variant="outline" size="sm"><Download size={14} className="mr-1" /> PDF</Button>
           <Button onClick={handleDelete} disabled={actionLoading} variant="destructive" size="sm"><Trash2 size={14} className="mr-1" /> Delete</Button>
         </div>
