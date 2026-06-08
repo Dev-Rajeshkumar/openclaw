@@ -90,3 +90,70 @@ export const getSummary = async (
     next(error);
   }
 };
+
+const toCSV = (headers: string[], rows: (string | number)[][]): string => {
+  const escape = (val: string | number) => '"' + String(val).replace(/"/g, '""') + '"';
+  const lines = [headers.map(escape).join(',')];
+  for (const row of rows) lines.push(row.map(escape).join(','));
+  return lines.join('\n');
+};
+
+export const exportData = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const businessId = req.headers['x-business-id'] as string;
+    const { type } = req.query;
+
+    let csv = '';
+
+    if (type === 'invoices') {
+      const invoices = await prisma.invoice.findMany({
+        where: { userId, businessId, deletedAt: null },
+        include: { client: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+      csv = toCSV(
+        ['Number', 'Client', 'Date', 'Due Date', 'Subtotal', 'Tax', 'Total', 'Status'],
+        invoices.map((i) => [i.invoiceNumber, i.client?.name || '', i.invoiceDate.toISOString().split('T')[0], i.dueDate.toISOString().split('T')[0], i.subtotal, i.taxAmount, i.total, i.status])
+      );
+    } else if (type === 'clients') {
+      const clients = await prisma.client.findMany({
+        where: { userId, businessId, deletedAt: null },
+        orderBy: { name: 'asc' },
+      });
+      csv = toCSV(
+        ['Name', 'Company', 'Email', 'Phone', 'GST', 'Status'],
+        clients.map((c) => [c.name, c.company || '', c.email || '', c.phone || '', c.gstNumber || '', c.status])
+      );
+    } else if (type === 'payments') {
+      const payments = await prisma.payment.findMany({
+        where: { userId, deletedAt: null },
+        include: { invoice: { select: { invoiceNumber: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+      csv = toCSV(
+        ['Invoice', 'Amount', 'Method', 'Reference', 'Status', 'Date'],
+        payments.map((p) => [p.invoice?.invoiceNumber || '', p.amount, p.method, p.reference || '', p.status, p.paidAt?.toISOString().split('T')[0] || ''])
+      );
+    } else if (type === 'expenses') {
+      const expenses = await prisma.expense.findMany({
+        where: { userId, businessId, deletedAt: null },
+        orderBy: { date: 'desc' },
+      });
+      csv = toCSV(
+        ['Date', 'Category', 'Amount', 'Description', 'Tax'],
+        expenses.map((e) => [e.date.toISOString().split('T')[0], e.category, e.amount, e.description || '', e.taxAmount || 0])
+      );
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${type}-export-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    next(error);
+  }
+};

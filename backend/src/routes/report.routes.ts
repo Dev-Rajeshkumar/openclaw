@@ -7,5 +7,6 @@ const router = Router({ mergeParams: true });
 router.use(auth);
 
 router.get('/summary', reportController.getSummary);
+router.get('/export', reportController.exportData);
 
 export default router;
