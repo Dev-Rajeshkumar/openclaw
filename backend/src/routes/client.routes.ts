@@ -15,6 +15,7 @@ router.post('/', validate(createClientSchema), clientController.create);
 router.get('/', clientController.getAll);
 router.get('/:id', clientController.getById);
 router.put('/:id', validate(updateClientSchema), clientController.update);
+router.get('/:id/invoices', clientController.getInvoices);
 router.delete('/:id', clientController.remove);
 
 export default router;
