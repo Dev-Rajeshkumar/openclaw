@@ -1,12 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Save, Loader2, User, Lock, Building2, Crown, FileText, Mail } from 'lucide-react';
+import { Save, Loader2, User, Lock, Building2, Crown, FileText, Mail, Palette, Star } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { profileSchema, ProfileFormData, changePasswordSchema, ChangePasswordFormData, newBusinessSchema, NewBusinessFormData } from '@/lib/validations';
-import { IUser, IBusiness, SubscriptionPlan, CurrencyCode } from '@/types';
+import { profileSchema, ProfileFormData, changePasswordSchema, ChangePasswordFormData } from '@/lib/validations';
+import { IUser, IBusiness, SubscriptionPlan, CurrencyCode, IInvoiceTemplate } from '@/types';
 import { getPlanColor, CURRENCY_SYMBOLS } from '@/lib/utils';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,11 +17,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const TEMPLATE_PREVIEWS: { slug: string; name: string; colors: string[]; premium: boolean }[] = [
+  { slug: 'classic', name: 'Classic', colors: ['#1a1a2e', '#e94560'], premium: false },
+  { slug: 'modern', name: 'Modern', colors: ['#6366f1', '#818cf8'], premium: false },
+  { slug: 'minimal', name: 'Minimal', colors: ['#111827', '#6b7280'], premium: true },
+  { slug: 'professional', name: 'Professional', colors: ['#0f172a', '#0ea5e9'], premium: true },
+  { slug: 'elegant', name: 'Elegant', colors: ['#7c3aed', '#a78bfa'], premium: true },
+];
+
 export default function SettingsPage() {
   const { user, updateUser, businesses, activeBusiness, setActiveBusiness, fetchBusinesses } = useAuth();
   const [saving, setSaving] = useState(false);
   const [showAddBusiness, setShowAddBusiness] = useState(false);
   const [newBusinessName, setNewBusinessName] = useState('');
+  const [defaultTemplate, setDefaultTemplate] = useState('classic');
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -42,6 +51,18 @@ export default function SettingsPage() {
       invoicePrefix: activeBusiness?.invoicePrefix || 'INV',
     },
   });
+
+  useEffect(() => {
+    if (activeBusiness) {
+      businessForm.reset({
+        name: activeBusiness.name || '',
+        gstNumber: activeBusiness.gstNumber || '',
+        phone: activeBusiness.phone || '',
+        address: activeBusiness.address || '',
+        invoicePrefix: activeBusiness.invoicePrefix || 'INV',
+      });
+    }
+  }, [activeBusiness, businessForm]);
 
   const onProfileSubmit = async (data: ProfileFormData) => {
     setSaving(true);
@@ -92,16 +113,34 @@ export default function SettingsPage() {
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : 'Failed'); } finally { setSaving(false); }
   };
 
+  const handleSetDefaultTemplate = async (slug: string) => {
+    if (!activeBusiness) return;
+    setSaving(true);
+    try {
+      await api.post(`/businesses/${activeBusiness.id}/invoice-templates/default`, { slug });
+      setDefaultTemplate(slug);
+      toast.success(`Default template set to ${slug}`);
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : 'Failed'); } finally { setSaving(false); }
+  };
+
+  const isPremiumTemplate = (slug: string) => {
+    const t = TEMPLATE_PREVIEWS.find((p) => p.slug === slug);
+    if (!t) return false;
+    if (!t.premium) return false;
+    return activeBusiness?.plan === SubscriptionPlan.Free || activeBusiness?.plan === SubscriptionPlan.Starter;
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div><h1 className="text-2xl font-bold text-gray-900">Settings</h1><p className="text-gray-500">Manage your account and businesses</p></div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
-          <TabsTrigger value="businesses">Businesses</TabsTrigger>
-          <TabsTrigger value="plan">Plan</TabsTrigger>
+        <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="profile" className="text-xs sm:text-sm">Profile</TabsTrigger>
+          <TabsTrigger value="password" className="text-xs sm:text-sm">Password</TabsTrigger>
+          <TabsTrigger value="businesses" className="text-xs sm:text-sm">Business</TabsTrigger>
+          <TabsTrigger value="templates" className="text-xs sm:text-sm">Templates</TabsTrigger>
+          <TabsTrigger value="plan" className="text-xs sm:text-sm">Plan</TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -126,7 +165,18 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Currency</Label>
-                  <select value={user?.currency || 'INR'} onChange={async (e) => { const currency = e.target.value as CurrencyCode; try { const { data: r } = await api.put('/users/profile', { currency }); if (r.success && r.data) updateUser(r.data as Partial<IUser>); toast.success('Currency updated'); } catch { toast.error('Failed'); } }} className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm">
+                  <select
+                    value={user?.currency || 'INR'}
+                    onChange={async (e) => {
+                      const currency = e.target.value as CurrencyCode;
+                      try {
+                        const { data: r } = await api.put('/users/profile', { currency });
+                        if (r.success && r.data) updateUser(r.data as Partial<IUser>);
+                        toast.success('Currency updated');
+                      } catch { toast.error('Failed'); }
+                    }}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+                  >
                     {Object.entries(CURRENCY_SYMBOLS).map(([code, symbol]) => <option key={code} value={code}>{symbol} {code}</option>)}
                   </select>
                 </div>
@@ -173,9 +223,8 @@ export default function SettingsPage() {
 
         {/* Businesses Tab */}
         <TabsContent value="businesses" className="space-y-6">
-          {/* Active Business List */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2"><Building2 size={18} /> Your Businesses</CardTitle>
               <Button size="sm" onClick={() => setShowAddBusiness(!showAddBusiness)}>+ Add</Button>
             </CardHeader>
@@ -190,55 +239,100 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 {businesses.map((b) => (
                   <div key={b.id} className={`flex items-center justify-between p-4 rounded-lg border-2 ${activeBusiness?.id === b.id ? 'border-amber-400 bg-amber-50' : 'border-gray-100'}`}>
-                    <div className="flex items-center gap-3">
-                      <Building2 size={18} className="text-gray-400" />
-                      <div>
-                        <p className="font-medium text-gray-900">{b.name}</p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Building2 size={18} className="text-gray-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{b.name}</p>
                         <p className="text-xs text-gray-400">{b.plan} Plan • {b.invoicePrefix} prefix</p>
                       </div>
-                      {activeBusiness?.id === b.id && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Active</span>}
+                      {activeBusiness?.id === b.id && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Active</span>}
                     </div>
-                    {activeBusiness?.id !== b.id && <Button size="sm" variant="outline" onClick={() => setActiveBusiness(b)}>Switch</Button>}
+                    {activeBusiness?.id !== b.id && <Button size="sm" variant="outline" onClick={() => setActiveBusiness(b)} className="shrink-0">Switch</Button>}
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Business Details Form */}
           {activeBusiness && (
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><FileText size={18} /> Business Details — {activeBusiness.name}</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={businessForm.handleSubmit(onBusinessSubmit)} className="space-y-4 max-w-lg">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Business Name</Label>
-                      <Input {...businessForm.register('name')} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>GST Number</Label>
-                      <Input {...businessForm.register('gstNumber')} placeholder="33AABCU9603R1ZM" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Phone</Label>
-                      <Input {...businessForm.register('phone')} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Invoice Prefix</Label>
-                      <Input {...businessForm.register('invoicePrefix')} placeholder="INV" />
-                    </div>
+                    <div className="space-y-2"><Label>Business Name</Label><Input {...businessForm.register('name')} /></div>
+                    <div className="space-y-2"><Label>GST Number</Label><Input {...businessForm.register('gstNumber')} placeholder="33AABCU9603R1ZM" /></div>
+                    <div className="space-y-2"><Label>Phone</Label><Input {...businessForm.register('phone')} /></div>
+                    <div className="space-y-2"><Label>Invoice Prefix</Label><Input {...businessForm.register('invoicePrefix')} placeholder="INV" /></div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Address</Label>
-                    <Textarea {...businessForm.register('address')} rows={3} />
-                  </div>
+                  <div className="space-y-2"><Label>Address</Label><Textarea {...businessForm.register('address')} rows={3} /></div>
                   <Button type="submit" disabled={saving}>
                     {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />} Save Business Details
                   </Button>
                 </form>
               </CardContent>
             </Card>
+          )}
+        </TabsContent>
+
+        {/* Templates Tab */}
+        <TabsContent value="templates" className="space-y-6">
+          {activeBusiness && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Palette size={18} /> Invoice Templates</CardTitle>
+                  <p className="text-sm text-gray-500">Choose your default template. Premium templates require Professional or higher.</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    {TEMPLATE_PREVIEWS.map((tp) => {
+                      const locked = isPremiumTemplate(tp.slug);
+                      const isDefault = defaultTemplate === tp.slug;
+                      return (
+                        <button
+                          key={tp.slug}
+                          onClick={() => !locked && handleSetDefaultTemplate(tp.slug)}
+                          disabled={locked || saving}
+                          className={`relative flex flex-col rounded-xl border-2 transition-all overflow-hidden ${
+                            isDefault ? 'border-amber-400 ring-2 ring-amber-200' :
+                            locked ? 'border-gray-100 opacity-50 cursor-not-allowed' :
+                            'border-gray-200 hover:border-amber-300 cursor-pointer'
+                          }`}
+                        >
+                          <div className="h-20 relative" style={{ background: `linear-gradient(135deg, ${tp.colors[0]}, ${tp.colors[1]})` }}>
+                            <div className="absolute inset-2 bg-white/90 rounded-sm p-1.5">
+                              <div className="w-6 h-1 rounded-sm mb-1" style={{ backgroundColor: tp.colors[0] }} />
+                              <div className="space-y-0.5">
+                                <div className="w-full h-px bg-gray-200" />
+                                <div className="w-3/4 h-px bg-gray-200" />
+                                <div className="w-5/6 h-px bg-gray-100" />
+                              </div>
+                              <div className="flex justify-end mt-1">
+                                <div className="w-4 h-1 rounded-sm" style={{ backgroundColor: tp.colors[1] }} />
+                              </div>
+                            </div>
+                            {isDefault && (
+                              <div className="absolute top-1 right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center">
+                                <Star size={8} className="text-white fill-white" />
+                              </div>
+                            )}
+                            {locked && (
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <span className="text-[8px] bg-white/90 px-1.5 py-0.5 rounded font-medium text-gray-600">PRO</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-2">
+                            <p className="text-xs font-semibold text-gray-900">{tp.name}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </TabsContent>
 
@@ -250,7 +344,7 @@ export default function SettingsPage() {
                 <CardHeader><CardTitle className="flex items-center gap-2"><Crown size={18} /> Current Plan — {activeBusiness.name}</CardTitle></CardHeader>
                 <CardContent>
                   <span className={`text-sm font-medium px-3 py-1 rounded-full ${getPlanColor(activeBusiness.plan)}`}>{activeBusiness.plan}</span>
-                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="mt-4 grid grid-cols-2 gap-4">
                     <div className="text-center p-3 bg-gray-50 rounded-lg">
                       <p className="text-lg font-bold text-gray-900">{activeBusiness.nextInvoiceNo - 1}</p>
                       <p className="text-xs text-gray-500">Invoices Created</p>
@@ -262,12 +356,12 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  { name: SubscriptionPlan.Free, price: 0, features: ['10 invoices/mo', '5 clients', 'GST PDF', '1 business'] },
-                  { name: SubscriptionPlan.Starter, price: 299, features: ['50 invoices/mo', '25 clients', 'Custom numbers', 'Analytics', '1 business'] },
-                  { name: SubscriptionPlan.Professional, price: 799, features: ['200 invoices/mo', '100 clients', 'No branding', 'Priority support', 'API access', '3 businesses'] },
-                  { name: SubscriptionPlan.Business, price: 2499, features: ['Unlimited invoices', 'Unlimited clients', 'Dedicated support', 'Custom integrations', 'Team roles', '10 businesses'] },
+                  { name: SubscriptionPlan.Free, price: 0, features: ['10 invoices/mo', '5 clients', '1 template', 'GST PDF', '1 business'] },
+                  { name: SubscriptionPlan.Starter, price: 299, features: ['50 invoices/mo', '25 clients', '2 templates', 'Custom numbers', 'Analytics', '1 business'] },
+                  { name: SubscriptionPlan.Professional, price: 799, features: ['200 invoices/mo', '100 clients', 'All templates', 'No branding', 'Priority support', 'API access', '3 businesses', 'Custom templates'] },
+                  { name: SubscriptionPlan.Business, price: 2499, features: ['Unlimited invoices', 'Unlimited clients', 'All templates', 'Dedicated support', 'Custom integrations', 'Team roles', '10 businesses', 'Custom templates'] },
                 ].map((plan) => (
                   <Card key={plan.name} className={activeBusiness.plan === plan.name ? 'border-amber-400 shadow-lg shadow-amber-100' : ''}>
                     <CardHeader>
