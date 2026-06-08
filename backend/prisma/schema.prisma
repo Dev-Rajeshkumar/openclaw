@@ -181,6 +181,9 @@ model Invoice {
   status         InvoiceStatus   @default(Draft)
   invoiceTemplateId String?    @db.ObjectId
   templateTextOverrides Json?
+  publicAccessToken String?  @unique
+  viewCount       Int            @default(0)
+  lastViewedAt    DateTime?
   notes          String?
   terms          String?
   deletedAt      DateTime?
@@ -503,4 +506,14 @@ enum SubscriptionStatus {
   Inactive
   Cancelled
   PastDue
+}
+
+model InvoiceViewLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId  String   @db.ObjectId
+  ipAddress  String?
+  userAgent  String?
+  viewedAt   DateTime @default(now())
+
+  @@map("invoice_view_logs")
 }

@@ -198,6 +198,9 @@ export interface IInvoice {
   terms?: string;
   payments?: IPayment[];
   statusLogs?: IStatusLog[];
+  publicAccessToken?: string;
+  viewCount?: number;
+  lastViewedAt?: string;
   createdAt: string;
   updatedAt?: string;
   deletedAt?: string;

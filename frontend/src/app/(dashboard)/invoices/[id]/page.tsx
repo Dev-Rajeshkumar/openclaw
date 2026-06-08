@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2 } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye } from 'lucide-react';
 import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, ITemplateTextOverrides, SubscriptionPlan } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
@@ -167,6 +167,41 @@ export default function InvoiceDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Public Link */}
+      {(invoice as any)?.publicAccessToken && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Link size={16} />
+                <span className="font-medium">Public Link:</span>
+              </div>
+              <div className="flex-1 flex items-center gap-2">
+                <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 truncate flex-1">
+                  {typeof window !== 'undefined' ? window.location.origin : ''}/i/{(invoice as any).publicAccessToken}
+                </code>
+                <button
+                  onClick={() => {
+                    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/i/${(invoice as any).publicAccessToken}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success('Link copied!');
+                  }}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition shrink-0"
+                  title="Copy link"
+                >
+                  <Copy size={14} className="text-gray-400" />
+                </button>
+              </div>
+              {(invoice as any)?.viewCount > 0 && (
+                <span className="text-xs text-gray-400 flex items-center gap-1 shrink-0">
+                  <Eye size={12} /> {(invoice as any).viewCount} views
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-6">

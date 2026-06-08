@@ -3,6 +3,7 @@ import { AppError } from '../utils/response.js';
 import { logStatusChange } from './statusLog.service.js';
 import { generateInvoiceNumber } from '../utils/invoiceNumber.js';
 import { InvoiceStatus, InvoiceItem, Plan } from '../types/index.js';
+import { v4 as uuidv4 } from 'uuid';
 import { isWithinLimit } from '../utils/planLimits.js';
 import { notifyNewInvoice } from './notification.service.js';
 
@@ -87,6 +88,7 @@ export async function createInvoice(
         terms: data.terms,
         invoiceTemplateId: data.invoiceTemplateId,
         templateTextOverrides: data.templateTextOverrides as any,
+        publicAccessToken: uuidv4(),
         createdBy: userId,
       },
     });
