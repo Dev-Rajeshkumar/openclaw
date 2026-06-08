@@ -22,6 +22,7 @@ router.patch(
   validate(updateInvoiceStatusSchema),
   invoiceController.updateStatus
 );
+router.get('/:id/pdf', invoiceController.downloadPDF);
 router.delete('/:id', invoiceController.remove);
 
 export default router;

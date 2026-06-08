@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download } from 'lucide-react';
 import { IInvoice, InvoiceStatus, IStatusLog } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
@@ -75,6 +75,7 @@ export default function InvoiceDetailPage() {
           {(invoice.status === InvoiceStatus.Sent || invoice.status === InvoiceStatus.Overdue || invoice.status === InvoiceStatus.PartiallyPaid) && (
             <Button onClick={handleRecordPayment} disabled={actionLoading} className="bg-green-600 hover:bg-green-700"><CheckCircle size={16} className="mr-2" /> Record Payment</Button>
           )}
+          <Button onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/v1/businesses/${invoice.businessId}/invoices/${invoice.id}/pdf`, '_blank')} disabled={actionLoading} variant="outline"><Download size={16} className="mr-2" /> PDF</Button>
           <Button onClick={handleDelete} disabled={actionLoading} variant="destructive"><Trash2 size={16} className="mr-2" /> Delete</Button>
         </div>
       </div>
