@@ -23,6 +23,7 @@ import expenseRoutes from './routes/expense.routes.js';
 import fileRoutes from './routes/file.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import teamRoutes from './routes/team.routes.js';
+import reportRoutes from './routes/report.routes.js';
 import activityLogRoutes from './routes/activityLog.routes.js';
 import statusLogRoutes from './routes/statusLog.routes.js';
 
@@ -79,6 +80,7 @@ app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/team`, teamRoutes);
 app.use(`${API_PREFIX}/activity-logs`, activityLogRoutes);
 app.use(`${API_PREFIX}/status-logs`, statusLogRoutes);
+app.use(`${API_PREFIX}/businesses/:businessId/reports`, reportRoutes);
 
 // ─── Activity Logger (after routes to capture all API calls) ────────
 app.use(activityLogger);
