@@ -9,6 +9,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { activityLogger } from './middleware/activityLogger.js';
 import { sendDiscordNotification } from './services/notification.service.js';
 import { processRecurringInvoices } from './jobs/recurringInvoice.job.js';
+import { processEmailReminders } from './jobs/emailReminder.job.js';
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
@@ -106,6 +107,7 @@ app.use(errorHandler);
 // ─── Cron Jobs ────────────────────────────────────────────────────
 // Run recurring invoice processor every hour
 if (config.env !== 'test') {
+  // Run recurring invoice processor every hour
   setInterval(async () => {
     try {
       const result = await processRecurringInvoices();
@@ -116,6 +118,24 @@ if (config.env !== 'test') {
       console.error('[Cron] Recurring invoice job failed:', error);
     }
   }, 60 * 60 * 1000); // Every hour
+
+  // Run email reminders daily (24h * 60m * 60s * 1000ms)
+  // Stagger by 5 minutes so it doesn't fire at the same time as the hourly job
+  setTimeout(() => {
+    processEmailReminders().catch((e) =>
+      console.error('[Cron] Email reminder job failed:', e)
+    );
+    setInterval(async () => {
+      try {
+        const result = await processEmailReminders();
+        if (result.sent > 0) {
+          console.log(`[Cron] Sent ${result.sent} email reminders`);
+        }
+      } catch (error) {
+        console.error('[Cron] Email reminder job failed:', error);
+      }
+    }, 24 * 60 * 60 * 1000); // Every 24 hours
+  }, 5 * 60 * 1000); // Start after 5 minutes
 
   // Run once on startup after 30 seconds
   setTimeout(() => {
