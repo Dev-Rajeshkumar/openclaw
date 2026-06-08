@@ -92,6 +92,8 @@ model Client {
   notes            String?
   tags             String[]
   status           ClientStatus @default(Active)
+  magicToken       String?
+  magicTokenExpires DateTime?
   deletedAt        DateTime?
   createdBy        String      @db.ObjectId
   updatedAt        DateTime    @updatedAt

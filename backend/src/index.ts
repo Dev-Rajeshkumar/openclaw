@@ -30,6 +30,7 @@ import statusLogRoutes from './routes/statusLog.routes.js';
 import productRoutes from './routes/product.routes.js';
 import publicInvoiceRoutes from './routes/publicInvoice.routes.js';
 import razorpayPaymentRoutes from './routes/razorpayPayment.routes.js';
+import clientPortalRoutes from './routes/clientPortal.routes.js';
 import gstRoutes from './routes/gst.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import invoiceTemplateRoutes from './routes/invoiceTemplate.routes.js';
@@ -92,6 +93,9 @@ app.use(`${API_PREFIX}/businesses/:businessId/team`, teamRoutes);
 app.use(`${API_PREFIX}/activity-logs`, activityLogRoutes);
 app.use(`${API_PREFIX}/status-logs`, statusLogRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/reports`, reportRoutes);
+
+// ─── Client Portal Routes ───────────────────────────────────────
+app.use('/portal', clientPortalRoutes);
 
 // ─── Public Invoice Routes (no auth) ──────────────────────────────
 app.use('/public/invoices', publicInvoiceRoutes);
