@@ -17,12 +17,29 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const TEMPLATE_PREVIEWS: { slug: string; name: string; colors: string[]; premium: boolean }[] = [
+const TEMPLATE_PREVIEWS: { slug: string; name: string; colors: string[]; premium: boolean; tier?: string }[] = [
   { slug: 'classic', name: 'Classic', colors: ['#1a1a2e', '#e94560'], premium: false },
   { slug: 'modern', name: 'Modern', colors: ['#6366f1', '#818cf8'], premium: false },
-  { slug: 'minimal', name: 'Minimal', colors: ['#111827', '#6b7280'], premium: true },
-  { slug: 'professional', name: 'Professional', colors: ['#0f172a', '#0ea5e9'], premium: true },
-  { slug: 'elegant', name: 'Elegant', colors: ['#7c3aed', '#a78bfa'], premium: true },
+  { slug: 'minimal', name: 'Minimal', colors: ['#111827', '#6b7280'], premium: false },
+  { slug: 'professional', name: 'Professional', colors: ['#0f172a', '#0ea5e9'], premium: true, tier: 'starter' },
+  { slug: 'elegant', name: 'Elegant', colors: ['#7c3aed', '#a78bfa'], premium: true, tier: 'starter' },
+  { slug: 'bold', name: 'Bold', colors: ['#000000', '#f59e0b'], premium: true, tier: 'starter' },
+  { slug: 'gradient-blue', name: 'Gradient Blue', colors: ['#2563eb', '#3b82f6'], premium: true, tier: 'professional' },
+  { slug: 'forest-green', name: 'Forest Green', colors: ['#166534', '#22c55e'], premium: true, tier: 'professional' },
+  { slug: 'sunset-orange', name: 'Sunset Orange', colors: ['#ea580c', '#fb923c'], premium: true, tier: 'professional' },
+  { slug: 'rose-gold', name: 'Rose Gold', colors: ['#9f1239', '#fb7185'], premium: true, tier: 'professional' },
+  { slug: 'tech-cyan', name: 'Tech Cyan', colors: ['#0e7490', '#22d3ee'], premium: true, tier: 'professional' },
+  { slug: 'arctic-white', name: 'Arctic White', colors: ['#1e40af', '#93c5fd'], premium: true, tier: 'professional' },
+  { slug: 'midnight-purple', name: 'Midnight Purple', colors: ['#3b0764', '#d97706'], premium: true, tier: 'business' },
+  { slug: 'coral-reef', name: 'Coral Reef', colors: ['#0d9488', '#f472b6'], premium: true, tier: 'business' },
+  { slug: 'slate-pro', name: 'Slate Pro', colors: ['#334155', '#475569'], premium: true, tier: 'business' },
+  { slug: 'espresso', name: 'Espresso', colors: ['#78350f', '#d97706'], premium: true, tier: 'business' },
+  { slug: 'neon-edge', name: 'Neon Edge', colors: ['#18181b', '#a3e635'], premium: true, tier: 'business' },
+  { slug: 'ocean-breeze', name: 'Ocean Breeze', colors: ['#0369a1', '#67e8f9'], premium: true, tier: 'business' },
+  { slug: 'cherry-blossom', name: 'Cherry Blossom', colors: ['#be185d', '#fda4af'], premium: true, tier: 'business' },
+  { slug: 'gunmetal', name: 'Gunmetal', colors: ['#1c1917', '#b45309'], premium: true, tier: 'business' },
+  { slug: 'lavender-dreams', name: 'Lavender Dreams', colors: ['#6d28d9', '#c4b5fd'], premium: true, tier: 'business' },
+  { slug: 'monochrome', name: 'Monochrome', colors: ['#000000', '#525252'], premium: true, tier: 'business' },
 ];
 
 export default function SettingsPage() {
@@ -125,9 +142,13 @@ export default function SettingsPage() {
 
   const isPremiumTemplate = (slug: string) => {
     const t = TEMPLATE_PREVIEWS.find((p) => p.slug === slug);
-    if (!t) return false;
-    if (!t.premium) return false;
-    return activeBusiness?.plan === SubscriptionPlan.Free || activeBusiness?.plan === SubscriptionPlan.Starter;
+    if (!t || !t.premium) return false;
+    const tier = (t as any).tier;
+    if (!tier) return false;
+    if (activeBusiness?.plan === SubscriptionPlan.Free) return tier === 'starter' || tier === 'professional' || tier === 'business';
+    if (activeBusiness?.plan === SubscriptionPlan.Starter) return tier === 'professional' || tier === 'business';
+    if (activeBusiness?.plan === SubscriptionPlan.Professional) return tier === 'business';
+    return false;
   };
 
   return (
@@ -285,7 +306,7 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-500">Choose your default template. Premium templates require Professional or higher.</p>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-[420px] overflow-y-auto pr-1">
                     {TEMPLATE_PREVIEWS.map((tp) => {
                       const locked = isPremiumTemplate(tp.slug);
                       const isDefault = defaultTemplate === tp.slug;
@@ -358,10 +379,10 @@ export default function SettingsPage() {
               </Card>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  { name: SubscriptionPlan.Free, price: 0, features: ['10 invoices/mo', '5 clients', '1 template', 'GST PDF', '1 business'] },
-                  { name: SubscriptionPlan.Starter, price: 299, features: ['50 invoices/mo', '25 clients', '2 templates', 'Custom numbers', 'Analytics', '1 business'] },
-                  { name: SubscriptionPlan.Professional, price: 799, features: ['200 invoices/mo', '100 clients', 'All templates', 'No branding', 'Priority support', 'API access', '3 businesses', 'Custom templates'] },
-                  { name: SubscriptionPlan.Business, price: 2499, features: ['Unlimited invoices', 'Unlimited clients', 'All templates', 'Dedicated support', 'Custom integrations', 'Team roles', '10 businesses', 'Custom templates'] },
+                  { name: SubscriptionPlan.Free, price: 0, features: ['10 invoices/mo', '5 clients', '3 templates', 'GST PDF', '1 business'] },
+                  { name: SubscriptionPlan.Starter, price: 299, features: ['50 invoices/mo', '25 clients', '6 templates', 'Custom numbers', 'Analytics', '1 business'] },
+                  { name: SubscriptionPlan.Professional, price: 799, features: ['200 invoices/mo', '100 clients', '12 templates', 'No branding', 'Priority support', 'API access', '3 businesses', 'Custom templates'] },
+                  { name: SubscriptionPlan.Business, price: 2499, features: ['Unlimited invoices', 'Unlimited clients', '22 templates', 'Dedicated support', 'Custom integrations', 'Team roles', '10 businesses', 'Custom templates'] },
                 ].map((plan) => (
                   <Card key={plan.name} className={activeBusiness.plan === plan.name ? 'border-amber-400 shadow-lg shadow-amber-100' : ''}>
                     <CardHeader>

@@ -12,12 +12,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const AVAILABLE_TEMPLATES: IInvoiceTemplate[] = [
-  { id: 'builtin_classic', name: 'Classic', slug: 'classic', description: 'Traditional layout', isBuiltIn: true, layout: { primaryColor: '#1a1a2e', accentColor: '#e94560', fontFamily: 'Helvetica', headerStyle: 'left-aligned', tableStyle: 'bordered', footerText: 'Thank you for your business!' } },
-  { id: 'builtin_modern', name: 'Modern', slug: 'modern', description: 'Bold header with accents', isBuiltIn: true, layout: { primaryColor: '#6366f1', accentColor: '#818cf8', fontFamily: 'Helvetica', headerStyle: 'full-width-banner', tableStyle: 'striped', footerText: 'Thank you for your business!' } },
-  { id: 'builtin_minimal', name: 'Minimal', slug: 'minimal', description: 'Clean and minimal', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#111827', accentColor: '#6b7280', fontFamily: 'Helvetica', headerStyle: 'minimal', tableStyle: 'simple', footerText: '' } },
-  { id: 'builtin_professional', name: 'Professional', slug: 'professional', description: 'Corporate style', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0f172a', accentColor: '#0ea5e9', fontFamily: 'Helvetica', headerStyle: 'two-column', tableStyle: 'detailed', footerText: 'Payment is due within the specified terms.' } },
-  { id: 'builtin_elegant', name: 'Elegant', slug: 'elegant', description: 'Sophisticated design', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#7c3aed', accentColor: '#a78bfa', fontFamily: 'Helvetica', headerStyle: 'centered', tableStyle: 'elegant', footerText: 'We appreciate your continued trust in our services.' } },
+const ALL_TEMPLATES: IInvoiceTemplate[] = [
+  { id: 'builtin_classic', name: 'Classic', slug: 'classic', description: 'Traditional layout', isBuiltIn: true, layout: { primaryColor: '#1a1a2e', accentColor: '#e94560', fontFamily: 'Helvetica', headerStyle: 'left-aligned', tableStyle: 'bordered', footerText: 'Thank you!', tier: '' } },
+  { id: 'builtin_modern', name: 'Modern', slug: 'modern', description: 'Bold header with accents', isBuiltIn: true, layout: { primaryColor: '#6366f1', accentColor: '#818cf8', fontFamily: 'Helvetica', headerStyle: 'full-width-banner', tableStyle: 'striped', footerText: 'Thank you!', tier: '' } },
+  { id: 'builtin_minimal', name: 'Minimal', slug: 'minimal', description: 'Clean and minimal', isBuiltIn: true, layout: { primaryColor: '#111827', accentColor: '#6b7280', fontFamily: 'Helvetica', headerStyle: 'minimal', tableStyle: 'simple', footerText: '', tier: '' } },
+  { id: 'builtin_professional', name: 'Professional', slug: 'professional', description: 'Corporate style', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0f172a', accentColor: '#0ea5e9', fontFamily: 'Helvetica', headerStyle: 'two-column', tableStyle: 'detailed', footerText: '', tier: 'starter' } },
+  { id: 'builtin_elegant', name: 'Elegant', slug: 'elegant', description: 'Sophisticated design', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#7c3aed', accentColor: '#a78bfa', fontFamily: 'Helvetica', headerStyle: 'centered', tableStyle: 'elegant', footerText: '', tier: 'starter' } },
+  { id: 'builtin_bold', name: 'Bold', slug: 'bold', description: 'High-contrast dark theme', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#000000', accentColor: '#f59e0b', fontFamily: 'Helvetica', headerStyle: 'full-bleed-dark', tableStyle: 'minimal-dark', footerText: '', tier: 'starter' } },
+  { id: 'builtin_gradient-blue', name: 'Gradient Blue', slug: 'gradient-blue', description: 'Smooth blue gradient', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#2563eb', accentColor: '#3b82f6', fontFamily: 'Helvetica', headerStyle: 'gradient-banner', tableStyle: 'clean', footerText: '', tier: 'professional' } },
+  { id: 'builtin_forest-green', name: 'Forest Green', slug: 'forest-green', description: 'Nature-inspired green', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#166534', accentColor: '#22c55e', fontFamily: 'Helvetica', headerStyle: 'left-accent-bar', tableStyle: 'soft-rows', footerText: '', tier: 'professional' } },
+  { id: 'builtin_sunset-orange', name: 'Sunset Orange', slug: 'sunset-orange', description: 'Warm sunset gradient', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#ea580c', accentColor: '#fb923c', fontFamily: 'Helvetica', headerStyle: 'warm-banner', tableStyle: 'striped-warm', footerText: '', tier: 'professional' } },
+  { id: 'builtin_rose-gold', name: 'Rose Gold', slug: 'rose-gold', description: 'Luxurious rose gold', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#9f1239', accentColor: '#fb7185', fontFamily: 'Helvetica', headerStyle: 'luxury-centered', tableStyle: 'refined', footerText: '', tier: 'professional' } },
+  { id: 'builtin_tech-cyan', name: 'Tech Cyan', slug: 'tech-cyan', description: 'Futuristic tech style', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0e7490', accentColor: '#22d3ee', fontFamily: 'Helvetica', headerStyle: 'tech-block', tableStyle: 'grid-lines', footerText: '', tier: 'professional' } },
+  { id: 'builtin_arctic-white', name: 'Arctic White', slug: 'arctic-white', description: 'Ultra-clean white', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#1e40af', accentColor: '#93c5fd', fontFamily: 'Helvetica', headerStyle: 'frost-header', tableStyle: 'airy', footerText: '', tier: 'professional' } },
+  { id: 'builtin_midnight-purple', name: 'Midnight Purple', slug: 'midnight-purple', description: 'Deep purple executive', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#3b0764', accentColor: '#d97706', fontFamily: 'Helvetica', headerStyle: 'executive-dark', tableStyle: 'executive-table', footerText: '', tier: 'business' } },
+  { id: 'builtin_coral-reef', name: 'Coral Reef', slug: 'coral-reef', description: 'Vibrant coral and teal', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0d9488', accentColor: '#f472b6', fontFamily: 'Helvetica', headerStyle: 'dual-tone', tableStyle: 'colorful-rows', footerText: '', tier: 'business' } },
+  { id: 'builtin_slate-pro', name: 'Slate Pro', slug: 'slate-pro', description: 'Ultra-professional slate', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#334155', accentColor: '#475569', fontFamily: 'Helvetica', headerStyle: 'sharp-minimal', tableStyle: 'compact-grid', footerText: '', tier: 'business' } },
+  { id: 'builtin_espresso', name: 'Espresso', slug: 'espresso', description: 'Rich brown tones', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#78350f', accentColor: '#d97706', fontFamily: 'Helvetica', headerStyle: 'warm-cream', tableStyle: 'cream-rows', footerText: '', tier: 'business' } },
+  { id: 'builtin_neon-edge', name: 'Neon Edge', slug: 'neon-edge', description: 'Dark with neon accents', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#18181b', accentColor: '#a3e635', fontFamily: 'Helvetica', headerStyle: 'neon-dark', tableStyle: 'neon-grid', footerText: '', tier: 'business' } },
+  { id: 'builtin_ocean-breeze', name: 'Ocean Breeze', slug: 'ocean-breeze', description: 'Calming ocean blue', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#0369a1', accentColor: '#67e8f9', fontFamily: 'Helvetica', headerStyle: 'aqua-wave', tableStyle: 'flowing-rows', footerText: '', tier: 'business' } },
+  { id: 'builtin_cherry-blossom', name: 'Cherry Blossom', slug: 'cherry-blossom', description: 'Delicate pink palette', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#be185d', accentColor: '#fda4af', fontFamily: 'Helvetica', headerStyle: 'sakura-header', tableStyle: 'delicate-rows', footerText: '', tier: 'business' } },
+  { id: 'builtin_gunmetal', name: 'Gunmetal', slug: 'gunmetal', description: 'Industrial dark theme', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#1c1917', accentColor: '#b45309', fontFamily: 'Helvetica', headerStyle: 'industrial-header', tableStyle: 'solid-grid', footerText: '', tier: 'business' } },
+  { id: 'builtin_lavender-dreams', name: 'Lavender Dreams', slug: 'lavender-dreams', description: 'Soft lavender palette', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#6d28d9', accentColor: '#c4b5fd', fontFamily: 'Helvetica', headerStyle: 'soft-gradient', tableStyle: 'gentle-rows', footerText: '', tier: 'business' } },
+  { id: 'builtin_monochrome', name: 'Monochrome', slug: 'monochrome', description: 'Pure black and white', isPremium: true, isBuiltIn: true, layout: { primaryColor: '#000000', accentColor: '#525252', fontFamily: 'Helvetica', headerStyle: 'bw-header', tableStyle: 'bw-table', footerText: '', tier: 'business' } },
 ];
 
 export default function InvoiceDetailPage() {
@@ -32,13 +49,10 @@ export default function InvoiceDetailPage() {
   const [userPlan, setUserPlan] = useState<string>('Free');
 
   const availableTemplates = useMemo(() => {
-    if (userPlan === SubscriptionPlan.Professional || userPlan === SubscriptionPlan.Business) {
-      return AVAILABLE_TEMPLATES;
-    }
-    if (userPlan === SubscriptionPlan.Starter) {
-      return AVAILABLE_TEMPLATES.filter((t) => !t.isPremium);
-    }
-    return AVAILABLE_TEMPLATES.filter((t) => !t.isPremium).slice(0, 1);
+    if (userPlan === SubscriptionPlan.Business) return ALL_TEMPLATES;
+    if (userPlan === SubscriptionPlan.Professional) return ALL_TEMPLATES.filter((t) => !t.isPremium || (t.layout as any).tier !== 'business');
+    if (userPlan === SubscriptionPlan.Starter) return ALL_TEMPLATES.filter((t) => !t.isPremium || (t.layout as any).tier === 'starter');
+    return ALL_TEMPLATES.filter((t) => !t.isPremium);
   }, [userPlan]);
 
   useEffect(() => {
