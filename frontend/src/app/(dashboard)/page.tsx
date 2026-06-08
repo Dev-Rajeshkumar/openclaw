@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FileText, IndianRupee, Clock, AlertTriangle, Plus, ArrowUpRight, Users, TrendingUp } from 'lucide-react';
-import { IDashboardStats, IInvoice, InvoiceStatus } from '@/types';
+import { FileText, IndianRupee, Clock, AlertTriangle, Plus, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { IDashboardStats, IInvoice } from '@/types';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,10 +21,10 @@ export default function DashboardPage() {
   }, []);
 
   const statCards = [
-    { label: 'Total Invoices', value: stats?.totalInvoices || 0, icon: FileText, color: 'bg-blue-50 text-blue-600', change: '+12%' },
-    { label: 'Total Revenue', value: formatCurrency(stats?.totalRevenue || 0), icon: IndianRupee, color: 'bg-green-50 text-green-600', change: '+8%' },
+    { label: 'Total Invoices', value: stats?.totalInvoices || 0, icon: FileText, color: 'bg-blue-50 text-blue-600', change: '' },
+    { label: 'Total Revenue', value: formatCurrency(stats?.totalRevenue || 0), icon: IndianRupee, color: 'bg-green-50 text-green-600', change: '' },
     { label: 'Pending Amount', value: formatCurrency(stats?.pendingAmount || 0), icon: Clock, color: 'bg-amber-50 text-amber-600', change: '' },
-    { label: 'Overdue', value: stats?.overdueInvoices || 0, icon: AlertTriangle, color: 'bg-red-50 text-red-600', change: '' },
+    { label: 'Overdue', value: stats?.overdueCount || 0, icon: AlertTriangle, color: 'bg-red-50 text-red-600', change: '' },
   ];
 
   return (
@@ -55,7 +55,6 @@ export default function DashboardPage() {
           ))}
       </div>
 
-      {/* Recent Invoices */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div><CardTitle>Recent Invoices</CardTitle><CardDescription>Your latest invoice activity</CardDescription></div>
@@ -73,7 +72,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-gray-900 text-sm">{formatCurrency(invoice.total)}</p>
-                      <Badge variant={invoice.status === 'PAID' ? 'success' : invoice.status === 'OVERDUE' ? 'destructive' : invoice.status === 'SENT' ? 'info' : 'secondary'} className="text-xs">{invoice.status}</Badge>
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>{invoice.status}</span>
                     </div>
                   </Link>
                 ))}

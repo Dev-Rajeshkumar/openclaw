@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { User, Business } from "@/types";
+import { IUser, IBusiness } from "@/types";
 import {
   setTokens,
   clearTokens as clearApiTokens,
@@ -9,18 +9,20 @@ import {
 } from "@/lib/api";
 
 interface AuthState {
-  user: User | null;
-  businesses: Business[];
-  activeBusiness: Business | null;
+  user: IUser | null;
+  businesses: IBusiness[];
+  activeBusiness: IBusiness | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isHydrated: boolean;
 
-  // Actions
-  setUser: (user: User | null) => void;
-  setBusinesses: (businesses: Business[]) => void;
-  setActiveBusinessById: (businessId: string) => void;
-  login: (user: User, accessToken: string, refreshToken: string, businesses?: Business[]) => void;
+  setUser: (user: IUser | null) => void;
+  setBusinesses: (businesses: IBusiness[]) => void;
+  setActiveBusiness: (business: IBusiness) => void;
+  updateUser: (data: Partial<IUser>) => void;
+  fetchProfile: () => Promise<void>;
+  fetchBusinesses: () => Promise<void>;
+  login: (user: IUser, accessToken: string, refreshToken: string, businesses?: IBusiness[]) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
   setHydrated: (hydrated: boolean) => void;
@@ -40,64 +42,58 @@ export const useAuthStore = create<AuthState>()(
 
       setBusinesses: (businesses) => {
         const currentActive = get().activeBusiness;
-        const storedId = getActiveBusiness();
-
         let activeBusiness = null;
         if (currentActive) {
           activeBusiness = businesses.find((b) => b.id === currentActive.id) || null;
         }
-        if (!activeBusiness && storedId) {
-          activeBusiness = businesses.find((b) => b.id === storedId) || null;
+        if (!activeBusiness) {
+          const storedId = getActiveBusiness();
+          if (storedId) activeBusiness = businesses.find((b) => b.id === storedId) || null;
         }
         if (!activeBusiness && businesses.length > 0) {
           activeBusiness = businesses[0];
           setActiveBusiness(businesses[0].id);
         }
-
         set({ businesses, activeBusiness });
       },
 
-      setActiveBusinessById: (businessId) => {
-        const business = get().businesses.find((b) => b.id === businessId);
-        if (business) {
-          setActiveBusiness(businessId);
-          set({ activeBusiness: business });
-        }
+      setActiveBusiness: (business: IBusiness) => {
+        setActiveBusiness(business.id);
+        set({ activeBusiness: business });
+      },
+
+      updateUser: (data) => {
+        const current = get().user;
+        if (current) set({ user: { ...current, ...data } });
+      },
+
+      fetchProfile: async () => {
+        // Placeholder — API call would go here
+      },
+
+      fetchBusinesses: async () => {
+        // Placeholder — API call would go here
       },
 
       login: (user, accessToken, refreshToken, businesses = []) => {
         setTokens(accessToken, refreshToken);
-
-        const storedId = getActiveBusiness();
         let activeBusiness = null;
-        if (storedId) {
-          activeBusiness = businesses.find((b) => b.id === storedId) || null;
-        }
+        const storedId = getActiveBusiness();
+        if (storedId) activeBusiness = businesses.find((b) => b.id === storedId) || null;
         if (!activeBusiness && businesses.length > 0) {
           activeBusiness = businesses[0];
           setActiveBusiness(businesses[0].id);
         }
-
-        set({
-          user,
-          isAuthenticated: true,
-          businesses,
-          activeBusiness,
-        });
+        set({ user, isAuthenticated: true, businesses, activeBusiness });
       },
 
       logout: () => {
         clearApiTokens();
-        set({
-          user: null,
-          isAuthenticated: false,
-          businesses: [],
-          activeBusiness: null,
-        });
+        set({ user: null, isAuthenticated: false, businesses: [], activeBusiness: null });
       },
 
       setLoading: (isLoading) => set({ isLoading }),
-      setHydrated: (isHydrated) => set({ isHydrated }),
+      setHydrated: (hydrated) => set({ isHydrated: true }),
     }),
     {
       name: "auth-storage",
@@ -114,22 +110,6 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Hook for auth actions that need API calls
 export function useAuth() {
-  const store = useAuthStore();
-
-  return {
-    user: store.user,
-    businesses: store.businesses,
-    activeBusiness: store.activeBusiness,
-    isAuthenticated: store.isAuthenticated,
-    isLoading: store.isLoading,
-    isHydrated: store.isHydrated,
-    login: store.login,
-    logout: store.logout,
-    setUser: store.setUser,
-    setBusinesses: store.setBusinesses,
-    setActiveBusinessById: store.setActiveBusinessById,
-    setLoading: store.setLoading,
-  };
+  return useAuthStore();
 }

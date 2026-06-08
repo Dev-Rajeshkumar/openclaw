@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -29,7 +28,11 @@ export default function ClientsPage() {
 
   useEffect(() => { fetchClients(); }, [fetchClients]);
 
-  const handleDelete = async (id: string) => { if (!confirm('Delete this client?')) return; try { await api.delete(`/clients/${id}`); toast.success('Client deleted'); fetchClients(); } catch { toast.error('Failed to delete'); } };
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this client?')) return;
+    try { await api.delete(`/clients/${id}`); toast.success('Client deleted'); fetchClients(); }
+    catch { toast.error('Failed to delete'); }
+  };
 
   return (
     <div className="space-y-6">
@@ -58,7 +61,7 @@ export default function ClientsPage() {
                   <h3 className="font-semibold text-gray-900 mb-1">{client.name}</h3>
                   {client.email && <p className="text-sm text-gray-500">{client.email}</p>}
                   {client.phone && <p className="text-sm text-gray-500">{client.phone}</p>}
-                  {client.gstNumber && <Badge variant="outline" className="mt-2 text-xs">GST: {client.gstNumber}</Badge>}
+                  {client.gstNumber && <p className="text-xs text-gray-400 mt-2">GST: {client.gstNumber}</p>}
                 </CardContent>
               </Card>
             ))}

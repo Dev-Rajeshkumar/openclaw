@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -28,15 +27,20 @@ export default function InvoicesPage() {
     try {
       const params = new URLSearchParams({ page: String(page), limit: '10', ...(search && { search }), ...(statusFilter && { status: statusFilter }) });
       const { data } = await api.get(`/invoices?${params}`);
-      if (data.success && data.data) { setInvoices(data.data as IInvoice[]); setTotalPages(data.meta?.totalPages || 1); }
+      if (data.success && data.data) {
+        setInvoices(data.data as IInvoice[]);
+        setTotalPages(data.meta?.totalPages || 1);
+      }
     } catch (error) { console.error(error); } finally { setLoading(false); }
   }, [page, search, statusFilter]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
-  const handleDelete = async (id: string) => { if (!confirm('Delete this invoice?')) return; try { await api.delete(`/invoices/${id}`); toast.success('Invoice deleted'); fetchInvoices(); } catch { toast.error('Failed to delete'); } };
-
-  const statusColors: Record<string, string> = { DRAFT: 'secondary', SENT: 'info', PAID: 'success', OVERDUE: 'destructive', CANCELLED: 'outline', VIEWED: 'info', PARTIALLY_PAID: 'warning' };
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this invoice?')) return;
+    try { await api.delete(`/invoices/${id}`); toast.success('Invoice deleted'); fetchInvoices(); }
+    catch { toast.error('Failed to delete'); }
+  };
 
   return (
     <div className="space-y-6">
@@ -53,7 +57,10 @@ export default function InvoicesPage() {
           </div>
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
             <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="All Status" /></SelectTrigger>
-            <SelectContent><SelectItem value="">All Status</SelectItem>{Object.values(InvoiceStatus).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+            <SelectContent>
+              <SelectItem value="">All Status</SelectItem>
+              {Object.values(InvoiceStatus).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
           </Select>
         </CardHeader>
         <CardContent>
@@ -69,7 +76,7 @@ export default function InvoicesPage() {
                         <TableCell className="text-gray-600">{inv.client?.name || '—'}</TableCell>
                         <TableCell className="text-gray-600">{formatDate(inv.invoiceDate)}</TableCell>
                         <TableCell className="text-right font-semibold">{formatCurrency(inv.total)}</TableCell>
-                        <TableCell><Badge variant={statusColors[inv.status] as any || 'secondary'}>{inv.status}</Badge></TableCell>
+                        <TableCell><span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(inv.status)}`}>{inv.status}</span></TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal size={16} /></Button></DropdownMenuTrigger>

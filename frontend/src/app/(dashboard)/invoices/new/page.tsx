@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { invoiceSchema, InvoiceFormData } from '@/lib/validations';
-import { GstType, IClient } from '@/types';
+import { IClient } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +26,7 @@ export default function NewInvoicePage() {
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
-    defaultValues: { gstType: GstType.CGST_SGST, gstRate: 18, items: [{ description: '', hsnCode: '', quantity: 1, rate: 0 }], clientId: '', notes: '' },
+    defaultValues: { gstRate: 18, items: [{ description: '', hsnCode: '', quantity: 1, rate: 0 }], clientId: '', notes: '' },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
@@ -41,7 +41,11 @@ export default function NewInvoicePage() {
   const onSubmit = async (formData: InvoiceFormData) => {
     setIsSubmitting(true);
     try {
-      const payload = { ...formData, clientId: formData.clientId || undefined, items: formData.items.map((item) => ({ ...item, quantity: Number(item.quantity), rate: Number(item.rate) })) };
+      const payload = {
+        ...formData,
+        clientId: formData.clientId || undefined,
+        items: formData.items.map((item) => ({ ...item, quantity: Number(item.quantity), rate: Number(item.rate), taxRate: watchedGstRate, amount: Number(item.quantity) * Number(item.rate) })),
+      };
       const { data } = await api.post('/invoices', payload);
       if (data.success) { toast.success('Invoice created!'); router.push('/dashboard/invoices'); }
     } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed'); } finally { setIsSubmitting(false); }
@@ -74,12 +78,12 @@ export default function NewInvoicePage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2"><Label>GST Type</Label>
-                <Select onValueChange={(v) => setValue('gstType', v as GstType)} defaultValue={GstType.CGST_SGST}>
+                <Select onValueChange={(v) => setValue('gstType', v)} defaultValue="CGST_SGST">
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value={GstType.CGST_SGST}>CGST + SGST</SelectItem><SelectItem value={GstType.IGST}>IGST</SelectItem><SelectItem value={GstType.UTGST}>UTGST</SelectItem></SelectContent>
+                  <SelectContent><SelectItem value="CGST_SGST">CGST + SGST</SelectItem><SelectItem value="IGST">IGST</SelectItem><SelectItem value="UTGST">UTGST</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>GST Rate</Label>
+              <div className="space-y-2"><Label>GST Rate (%)</Label>
                 <Select onValueChange={(v) => setValue('gstRate', Number(v))} defaultValue="18">
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="0">0%</SelectItem><SelectItem value="5">5%</SelectItem><SelectItem value="12">12%</SelectItem><SelectItem value="18">18%</SelectItem><SelectItem value="28">28%</SelectItem></SelectContent>
