@@ -211,8 +211,8 @@ export async function convertToInvoice(
     throw new AppError('Estimate not found', 404);
   }
 
-  if (estimate.status !== EstimateStatus.Accepted) {
-    throw new AppError('Only accepted estimates can be converted to invoices', 400);
+  if (estimate.status !== EstimateStatus.Accepted && estimate.status !== EstimateStatus.Sent) {
+    throw new AppError('Only sent or accepted estimates can be converted to invoices', 400);
   }
 
   // Get business for invoice prefix
