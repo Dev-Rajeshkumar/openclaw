@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import prisma from '../prisma/index.js';
 import * as invoiceService from '../services/invoice.service.js';
 import { generateInvoicePDF } from '../utils/pdf.js';
+import { sendInvoiceEmail } from '../utils/email.js';
 import { AuthenticatedRequest, InvoiceStatus } from '../types/index.js';
 import { ApiResponse } from '../utils/response.js';
 
@@ -101,6 +102,43 @@ export const updateStatus = async (
       status as InvoiceStatus
     );
     res.status(200).json(ApiResponse.success(invoice, 'Invoice status updated'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendEmail = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+    const invoice = await prisma.invoice.findFirst({
+      where: { id, userId, deletedAt: null },
+      include: { client: true, business: true },
+    });
+    if (!invoice) {
+      res.status(404).json({ success: false, message: 'Invoice not found' });
+      return;
+    }
+    if (!invoice.client?.email) {
+      res.status(400).json({ success: false, message: 'Client has no email address' });
+      return;
+    }
+    const sent = await sendInvoiceEmail(
+      invoice.client.email,
+      invoice.invoiceNumber,
+      invoice.business?.name || 'BillingBee',
+      invoice.total,
+      invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-IN') : 'N/A',
+    );
+    if (sent) {
+      res.json(ApiResponse.success(null, `Invoice sent to ${invoice.client.email}`));
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to send email' });
+    }
   } catch (error) {
     next(error);
   }
