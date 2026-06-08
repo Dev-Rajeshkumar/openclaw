@@ -192,6 +192,7 @@ export interface IInvoice {
   taxAmount: number;
   total: number;
   status: InvoiceStatus;
+  invoiceTemplateId?: string;
   notes?: string;
   terms?: string;
   payments?: IPayment[];
@@ -362,6 +363,26 @@ export interface IFile {
   uploadedBy: string;
   createdAt: string;
   deletedAt?: string;
+}
+
+// ─── Invoice Templates ────────────────────────────────────
+export interface IInvoiceTemplate {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  isDefault?: boolean;
+  isPremium?: boolean;
+  isBuiltIn?: boolean;
+  layout: {
+    primaryColor: string;
+    accentColor: string;
+    fontFamily: string;
+    headerStyle: string;
+    tableStyle: string;
+    footerText: string;
+  };
+  createdAt?: string;
 }
 
 // ─── Dashboard / Stats ─────────────────────────────────────
