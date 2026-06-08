@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, FileText, Users, Settings, LogOut,
   Menu, X, ChevronDown, Building2, Plus, Activity, Receipt,
-  ClipboardList, Repeat, CreditCard, Bell, BarChart3, UserCog, FolderOpen, Package,
+  ClipboardList, Repeat, CreditCard, Bell, BarChart3, UserCog, FolderOpen, Package, Percent,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { CommandPalette } from '@/components/CommandPalette';
@@ -26,6 +26,7 @@ const navItems = [
   { href: '/dashboard/team', label: 'Team', icon: UserCog },
   { href: '/dashboard/files', label: 'Files', icon: FolderOpen },
   { href: '/dashboard/products', label: 'Products', icon: Package },
+  { href: '/dashboard/gst', label: 'GST Reports', icon: Percent },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
