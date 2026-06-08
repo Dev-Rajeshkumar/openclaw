@@ -6,8 +6,8 @@ import { toast } from 'sonner';
 import { Save, Loader2, User, Lock, Building2, Crown, FileText, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { profileSchema, ProfileFormData, changePasswordSchema, ChangePasswordFormData, newBusinessSchema, NewBusinessFormData } from '@/lib/validations';
-import { IUser, IBusiness, SubscriptionPlan } from '@/types';
-import { getPlanColor } from '@/lib/utils';
+import { IUser, IBusiness, SubscriptionPlan, CurrencyCode } from '@/types';
+import { getPlanColor, CURRENCY_SYMBOLS } from '@/lib/utils';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -126,7 +126,9 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Currency</Label>
-                  <Input value={user?.currency || 'INR'} disabled className="bg-gray-50" />
+                  <select value={user?.currency || 'INR'} onChange={async (e) => { const currency = e.target.value as CurrencyCode; try { const { data: r } = await api.put('/users/profile', { currency }); if (r.success && r.data) updateUser(r.data as Partial<IUser>); toast.success('Currency updated'); } catch { toast.error('Failed'); } }} className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm">
+                    {Object.entries(CURRENCY_SYMBOLS).map(([code, symbol]) => <option key={code} value={code}>{symbol} {code}</option>)}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label>Timezone</Label>

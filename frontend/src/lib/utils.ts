@@ -6,13 +6,32 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 0,
+export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP' | 'AED' | 'SGD' | 'AUD' | 'CAD' | 'JPY' | 'CNY';
+
+export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
+  INR: '₹', USD: '$', EUR: '€', GBP: '£', AED: 'د.إ',
+  SGD: 'S$', AUD: 'A$', CAD: 'C$', JPY: '¥', CNY: '¥',
+};
+
+export const CURRENCY_LOCALES: Record<CurrencyCode, string> = {
+  INR: 'en-IN', USD: 'en-US', EUR: 'de-DE', GBP: 'en-GB', AED: 'ar-AE',
+  SGD: 'en-SG', AUD: 'en-AU', CAD: 'en-CA', JPY: 'ja-JP', CNY: 'zh-CN',
+};
+
+export function formatCurrency(amount: number, currency: CurrencyCode = 'INR'): string {
+  return new Intl.NumberFormat(CURRENCY_LOCALES[currency] || 'en-IN', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: currency === 'JPY' ? 0 : 0,
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+export function formatCurrencyCompact(amount: number, currency: CurrencyCode = 'INR'): string {
+  if (amount >= 10000000) return `${CURRENCY_SYMBOLS[currency]}${(amount / 10000000).toFixed(2)}Cr`;
+  if (amount >= 100000) return `${CURRENCY_SYMBOLS[currency]}${(amount / 100000).toFixed(2)}L`;
+  if (amount >= 1000) return `${CURRENCY_SYMBOLS[currency]}${(amount / 1000).toFixed(1)}K`;
+  return formatCurrency(amount, currency);
 }
 
 export function formatDate(date: string | Date): string {

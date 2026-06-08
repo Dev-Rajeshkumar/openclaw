@@ -130,6 +130,9 @@ export interface IClient {
   deletedAt?: string;
 }
 
+// ─── Currency ─────────────────────────────────────────────
+export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP' | 'AED' | 'SGD' | 'AUD' | 'CAD' | 'JPY' | 'CNY';
+
 // ─── Products ─────────────────────────────────────────────
 export interface IProduct {
   id: string;
