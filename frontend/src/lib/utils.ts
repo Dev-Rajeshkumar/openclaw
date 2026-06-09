@@ -75,6 +75,9 @@ export function formatRelativeDate(date: string | Date): string {
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
     Draft: "bg-gray-100 text-gray-700",
+    PendingReview: "bg-amber-50 text-amber-700",
+    Approved: "bg-green-50 text-green-700",
+    Rejected: "bg-red-50 text-red-700",
     Sent: "bg-blue-50 text-blue-700",
     Viewed: "bg-indigo-50 text-indigo-700",
     PartiallyPaid: "bg-amber-50 text-amber-700",
@@ -104,7 +107,7 @@ export function isInvoiceCancellable(status: string): boolean {
 }
 
 export function isInvoiceEditable(status: string): boolean {
-  return status === "Draft";
+  return status === "Draft" || status === "Rejected";
 }
 
 export function isInvoicePaid(status: string): boolean {

@@ -4,8 +4,70 @@ import * as invoiceService from '../services/invoice.service.js';
 import * as templateService from '../services/invoiceTemplate.service.js';
 import { generateInvoicePDF } from '../utils/pdf.js';
 import { sendInvoiceEmail } from '../utils/email.js';
-import { AuthenticatedRequest, InvoiceStatus } from '../types/index.js';
-import { ApiResponse } from '../utils/response.js';
+import { AuthenticatedRequest, InvoiceStatus, TeamRole } from '../types/index.js';
+import { ApiResponse, AppError } from '../utils/response.js';
+import { logStatusChange } from '../services/statusLog.service.js';
+
+/**
+ * Check if user has a privileged role (Owner, Admin, or Accountant) in the business.
+ * Returns the team member record or null.
+ */
+async function getPrivilegedMember(userId: string, businessId: string) {
+  // Check if user is the business owner
+  const business = await prisma.business.findFirst({
+    where: { id: businessId, userId, deletedAt: null },
+  });
+  if (business) {
+    return { role: TeamRole.Owner };
+  }
+
+  // Check team membership
+  const member = await prisma.teamMember.findFirst({
+    where: { businessId, userId, deletedAt: null },
+  });
+  if (member && [TeamRole.Owner, TeamRole.Admin, TeamRole.Accountant].includes(member.role)) {
+    return member;
+  }
+  return null;
+}
+
+/**
+ * Create a notification for all privileged users in a business
+ */
+async function notifyPrivilegedUsers(businessId: string, excludeUserId: string, title: string, message: string, type: string, link?: string) {
+  // Get business owner
+  const business = await prisma.business.findFirst({
+    where: { id: businessId, deletedAt: null },
+  });
+
+  const notifyUserIds = new Set<string>();
+  if (business) notifyUserIds.add(business.userId);
+
+  // Get privileged team members
+  const privilegedMembers = await prisma.teamMember.findMany({
+    where: {
+      businessId,
+      deletedAt: null,
+      role: { in: [TeamRole.Owner, TeamRole.Admin, TeamRole.Accountant] },
+    },
+  });
+  privilegedMembers.forEach((m) => notifyUserIds.add(m.userId));
+
+  // Exclude the actor
+  notifyUserIds.delete(excludeUserId);
+
+  if (notifyUserIds.size === 0) return;
+
+  await prisma.notification.createMany({
+    data: Array.from(notifyUserIds).map((uid) => ({
+      userId: uid,
+      title,
+      message,
+      type: type as any,
+      link,
+    })),
+  });
+}
 
 export const create = async (
   req: AuthenticatedRequest,
@@ -245,6 +307,247 @@ export const getStats = async (
     const { businessId } = req.params;
     const stats = await invoiceService.getInvoiceStats(userId, businessId);
     res.status(200).json(ApiResponse.success(stats));
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Approval Workflow ────────────────────────────────────
+
+export const submitForReview = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+
+    const oldInvoice = await prisma.invoice.findFirst({
+      where: { id, userId, deletedAt: null },
+    });
+
+    if (!oldInvoice) {
+      throw new AppError('Invoice not found', 404);
+    }
+
+    if (oldInvoice.status !== InvoiceStatus.Draft && oldInvoice.status !== InvoiceStatus.Rejected) {
+      throw new AppError('Only draft or rejected invoices can be submitted for review', 400);
+    }
+
+    const invoice = await prisma.invoice.update({
+      where: { id },
+      data: { status: InvoiceStatus.PendingReview },
+    });
+
+    await logStatusChange({
+      entity: 'Invoice',
+      entityId: id,
+      action: 'STATUS_CHANGE',
+      oldValue: oldInvoice.status,
+      newValue: InvoiceStatus.PendingReview,
+      description: `Invoice ${oldInvoice.invoiceNumber} submitted for review`,
+      changedBy: userId,
+    });
+
+    // Notify admins/owners
+    await notifyPrivilegedUsers(
+      oldInvoice.businessId,
+      userId,
+      'Invoice Submitted for Review',
+      `Invoice ${oldInvoice.invoiceNumber} has been submitted for your review.`,
+      'Invoice',
+      `/dashboard/invoices/${id}`
+    );
+
+    res.status(200).json(ApiResponse.success(invoice, 'Invoice submitted for review'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const approveInvoice = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+    const businessId = (req.params.businessId || req.headers['x-business-id'] as string);
+
+    // Check role
+    const member = await getPrivilegedMember(userId, businessId);
+    if (!member) {
+      throw new AppError('Only Owner, Admin, or Accountant can approve invoices', 403);
+    }
+
+    const oldInvoice = await prisma.invoice.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!oldInvoice) {
+      throw new AppError('Invoice not found', 404);
+    }
+
+    if (oldInvoice.status !== InvoiceStatus.PendingReview) {
+      throw new AppError('Only pending review invoices can be approved', 400);
+    }
+
+    const invoice = await prisma.invoice.update({
+      where: { id },
+      data: {
+        status: InvoiceStatus.Approved,
+        reviewerId: userId,
+        reviewedAt: new Date(),
+      },
+    });
+
+    await logStatusChange({
+      entity: 'Invoice',
+      entityId: id,
+      action: 'STATUS_CHANGE',
+      oldValue: oldInvoice.status,
+      newValue: InvoiceStatus.Approved,
+      description: `Invoice ${oldInvoice.invoiceNumber} approved`,
+      changedBy: userId,
+    });
+
+    // Notify invoice creator
+    if (oldInvoice.userId !== userId) {
+      await prisma.notification.create({
+        data: {
+          userId: oldInvoice.userId,
+          title: 'Invoice Approved',
+          message: `Invoice ${oldInvoice.invoiceNumber} has been approved and is ready to send.`,
+          type: 'Invoice',
+          link: `/dashboard/invoices/${id}`,
+        },
+      });
+    }
+
+    res.status(200).json(ApiResponse.success(invoice, 'Invoice approved'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rejectInvoice = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+    const businessId = (req.params.businessId || req.headers['x-business-id'] as string);
+    const { notes } = req.body;
+
+    // Check role
+    const member = await getPrivilegedMember(userId, businessId);
+    if (!member) {
+      throw new AppError('Only Owner, Admin, or Accountant can reject invoices', 403);
+    }
+
+    const oldInvoice = await prisma.invoice.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!oldInvoice) {
+      throw new AppError('Invoice not found', 404);
+    }
+
+    if (oldInvoice.status !== InvoiceStatus.PendingReview) {
+      throw new AppError('Only pending review invoices can be rejected', 400);
+    }
+
+    const invoice = await prisma.invoice.update({
+      where: { id },
+      data: {
+        status: InvoiceStatus.Rejected,
+        reviewerId: userId,
+        reviewedAt: new Date(),
+        reviewNotes: notes || null,
+      },
+    });
+
+    await logStatusChange({
+      entity: 'Invoice',
+      entityId: id,
+      action: 'STATUS_CHANGE',
+      oldValue: oldInvoice.status,
+      newValue: InvoiceStatus.Rejected,
+      description: `Invoice ${oldInvoice.invoiceNumber} rejected${notes ? `: ${notes}` : ''}`,
+      changedBy: userId,
+      metadata: notes ? { notes } : undefined,
+    });
+
+    // Notify invoice creator
+    if (oldInvoice.userId !== userId) {
+      await prisma.notification.create({
+        data: {
+          userId: oldInvoice.userId,
+          title: 'Invoice Rejected',
+          message: `Invoice ${oldInvoice.invoiceNumber} was rejected.${notes ? ` Reason: ${notes}` : ''}`,
+          type: 'Invoice',
+          link: `/dashboard/invoices/${id}`,
+        },
+      });
+    }
+
+    res.status(200).json(ApiResponse.success(invoice, 'Invoice rejected'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendApprovedInvoice = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+
+    const oldInvoice = await prisma.invoice.findFirst({
+      where: { id, userId, deletedAt: null },
+    });
+
+    if (!oldInvoice) {
+      throw new AppError('Invoice not found', 404);
+    }
+
+    if (oldInvoice.status !== InvoiceStatus.Approved) {
+      throw new AppError('Only approved invoices can be sent', 400);
+    }
+
+    const invoice = await prisma.invoice.update({
+      where: { id },
+      data: { status: InvoiceStatus.Sent },
+    });
+
+    await logStatusChange({
+      entity: 'Invoice',
+      entityId: id,
+      action: 'STATUS_CHANGE',
+      oldValue: oldInvoice.status,
+      newValue: InvoiceStatus.Sent,
+      description: `Invoice ${oldInvoice.invoiceNumber} sent to client`,
+      changedBy: userId,
+    });
+
+    // Notify team
+    await notifyPrivilegedUsers(
+      oldInvoice.businessId,
+      userId,
+      'Invoice Sent',
+      `Invoice ${oldInvoice.invoiceNumber} has been sent to the client.`,
+      'Invoice',
+      `/dashboard/invoices/${id}`
+    );
+
+    res.status(200).json(ApiResponse.success(invoice, 'Invoice sent successfully'));
   } catch (error) {
     next(error);
   }

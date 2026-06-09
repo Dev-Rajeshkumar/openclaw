@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye, CopyPlus, MessageCircle, MessageSquareText, Paperclip, Upload, X, FileIcon, Loader2 } from 'lucide-react';
-import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, ITemplateTextOverrides, SubscriptionPlan, IFile } from '@/types';
+import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye, CopyPlus, MessageCircle, MessageSquareText, Paperclip, Upload, X, FileIcon, Loader2, XCircle, RefreshCw } from 'lucide-react';
+import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, ITemplateTextOverrides, SubscriptionPlan, IFile, TeamRole } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '@/lib/utils';
 import api, { getActiveBusiness } from '@/lib/api';
 import { toast } from 'sonner';
@@ -60,6 +60,8 @@ export default function InvoiceDetailPage() {
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isPremium = userPlan === SubscriptionPlan.Professional || userPlan === SubscriptionPlan.Business;
 
@@ -134,6 +136,51 @@ export default function InvoiceDetailPage() {
       const { data } = await api.post(`/invoices/${id}/duplicate`);
       if (data.success && data.data) { toast.success('Invoice duplicated!'); router.push(`/dashboard/invoices/${(data.data as any).id}`); }
     } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to duplicate'); } finally { setActionLoading(false); }
+  };
+
+  const handleSubmitForReview = async () => {
+    if (!invoice) return;
+    setActionLoading(true);
+    try {
+      const { data } = await api.post(`/invoices/${id}/submit-for-review`);
+      if (data.success && data.data) { setInvoice(data.data as IInvoice); toast.success('Invoice submitted for review'); }
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to submit'); } finally { setActionLoading(false); }
+  };
+
+  const handleApprove = async () => {
+    if (!invoice) return;
+    setActionLoading(true);
+    try {
+      const { data } = await api.post(`/invoices/${id}/approve`);
+      if (data.success && data.data) { setInvoice(data.data as IInvoice); toast.success('Invoice approved'); }
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to approve'); } finally { setActionLoading(false); }
+  };
+
+  const handleReject = async () => {
+    if (!invoice) return;
+    setActionLoading(true);
+    try {
+      const { data } = await api.post(`/invoices/${id}/reject`, { notes: rejectNotes || undefined });
+      if (data.success && data.data) { setInvoice(data.data as IInvoice); toast.success('Invoice rejected'); setShowRejectModal(false); setRejectNotes(''); }
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to reject'); } finally { setActionLoading(false); }
+  };
+
+  const handleSendApproved = async () => {
+    if (!invoice) return;
+    setActionLoading(true);
+    try {
+      const { data } = await api.post(`/invoices/${id}/send`);
+      if (data.success && data.data) { setInvoice(data.data as IInvoice); toast.success('Invoice sent to client'); }
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to send'); } finally { setActionLoading(false); }
+  };
+
+  const handleResubmit = async () => {
+    if (!invoice) return;
+    setActionLoading(true);
+    try {
+      const { data } = await api.post(`/invoices/${id}/submit-for-review`);
+      if (data.success && data.data) { setInvoice(data.data as IInvoice); toast.success('Invoice resubmitted for review'); }
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to resubmit'); } finally { setActionLoading(false); }
   };
 
   const getPublicUrl = () => {
@@ -270,7 +317,34 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {invoice.status === InvoiceStatus.DRAFT && (<Button onClick={() => handleStatusChange(InvoiceStatus.Sent)} disabled={actionLoading} variant="outline" size="sm"><Send size={14} className="mr-1" /> Mark Sent</Button>)}
+          {/* Draft: Submit for Review */}
+          {invoice.status === InvoiceStatus.Draft && (
+            <Button onClick={handleSubmitForReview} disabled={actionLoading} className="bg-amber-500 hover:bg-amber-600" size="sm">
+              <Send size={14} className="mr-1" /> Submit for Review
+            </Button>
+          )}
+          {/* Pending Review: Approve / Reject */}
+          {invoice.status === InvoiceStatus.PendingReview && (<>
+            <Button onClick={handleApprove} disabled={actionLoading} className="bg-green-600 hover:bg-green-700" size="sm">
+              <CheckCircle size={14} className="mr-1" /> Approve
+            </Button>
+            <Button onClick={() => setShowRejectModal(true)} disabled={actionLoading} variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+              <XCircle size={14} className="mr-1" /> Reject
+            </Button>
+          </>)}
+          {/* Approved: Send to Client */}
+          {invoice.status === InvoiceStatus.Approved && (
+            <Button onClick={handleSendApproved} disabled={actionLoading} className="bg-blue-600 hover:bg-blue-700" size="sm">
+              <Send size={14} className="mr-1" /> Send to Client
+            </Button>
+          )}
+          {/* Rejected: Resubmit */}
+          {invoice.status === InvoiceStatus.Rejected && (
+            <Button onClick={handleResubmit} disabled={actionLoading} className="bg-amber-500 hover:bg-amber-600" size="sm">
+              <RefreshCw size={14} className="mr-1" /> Resubmit
+            </Button>
+          )}
+          {invoice.status === InvoiceStatus.Draft && (<Button onClick={() => handleStatusChange(InvoiceStatus.Sent)} disabled={actionLoading} variant="outline" size="sm"><Send size={14} className="mr-1" /> Mark Sent</Button>)}
           {(invoice.status === InvoiceStatus.Sent || invoice.status === InvoiceStatus.Overdue || invoice.status === InvoiceStatus.PartiallyPaid) && (<Button onClick={handleRecordPayment} disabled={actionLoading} className="bg-green-600 hover:bg-green-700" size="sm"><CheckCircle size={14} className="mr-1" /> Record Payment</Button>)}
           {invoice.client?.email && (<Button onClick={async () => { setActionLoading(true); try { await api.post(`/invoices/${invoice.id}/send-email`); toast.success(`Sent to ${invoice.client?.email}`); } catch { toast.error('Failed'); } finally { setActionLoading(false); } }} disabled={actionLoading} variant="outline" size="sm"><Mail size={14} className="mr-1" /> Email</Button>)}
           <Button onClick={handleDuplicate} disabled={actionLoading} variant="outline" size="sm"><CopyPlus size={14} className="mr-1" /> Duplicate</Button>
@@ -390,6 +464,14 @@ export default function InvoiceDetailPage() {
           </div>
 
           {invoice.notes && (<div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"><p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Notes</p><p className="text-sm text-gray-700 dark:text-gray-300">{invoice.notes}</p></div>)}
+          {/* Review Notes */}
+          {invoice.reviewNotes && (
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+              <p className="text-sm font-medium text-red-700 dark:text-red-400 mb-1">Review Notes</p>
+              <p className="text-sm text-red-600 dark:text-red-300">{invoice.reviewNotes}</p>
+              {invoice.reviewedAt && <p className="text-xs text-red-400 dark:text-red-500 mt-2">Reviewed {formatDateTime(invoice.reviewedAt)}</p>}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -564,6 +646,33 @@ export default function InvoiceDetailPage() {
           </div>
           <div className="flex justify-end mt-2">
             <Button variant="outline" size="sm" onClick={() => setShowFollowUp(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejection Notes Modal */}
+      <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><XCircle size={20} className="text-red-500" /> Reject Invoice</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this invoice. The creator will see these notes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <textarea
+              value={rejectNotes}
+              onChange={(e) => setRejectNotes(e.target.value)}
+              placeholder="Enter rejection notes..."
+              rows={4}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:border-amber-500 focus:ring-amber-500 resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" size="sm" onClick={() => { setShowRejectModal(false); setRejectNotes(''); }}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleReject} disabled={actionLoading}>
+              {actionLoading ? <><Loader2 size={14} className="animate-spin mr-1" /> Rejecting...</> : 'Reject Invoice'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

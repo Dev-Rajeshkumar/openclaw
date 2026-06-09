@@ -7,6 +7,7 @@ import {
   updateInvoiceSchema,
   updateInvoiceStatusSchema,
 } from '../validators/invoice.validator.js';
+import { z } from 'zod';
 
 const router = Router({ mergeParams: true });
 
@@ -26,5 +27,15 @@ router.post('/:id/duplicate', invoiceController.duplicateInvoice);
 router.post('/:id/send-email', invoiceController.sendEmail);
 router.get('/:id/pdf', invoiceController.downloadPDF);
 router.delete('/:id', invoiceController.remove);
+
+// Approval workflow routes
+router.post('/:id/submit-for-review', invoiceController.submitForReview);
+router.post('/:id/approve', invoiceController.approveInvoice);
+router.post(
+  '/:id/reject',
+  validate(z.object({ notes: z.string().optional() })),
+  invoiceController.rejectInvoice
+);
+router.post('/:id/send', invoiceController.sendApprovedInvoice);
 
 export default router;

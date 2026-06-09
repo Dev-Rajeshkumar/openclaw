@@ -24,6 +24,9 @@ export enum EstimateStatus {
 
 export enum InvoiceStatus {
   Draft = 'Draft',
+  PendingReview = 'PendingReview',
+  Approved = 'Approved',
+  Rejected = 'Rejected',
   Sent = 'Sent',
   Viewed = 'Viewed',
   PartiallyPaid = 'PartiallyPaid',

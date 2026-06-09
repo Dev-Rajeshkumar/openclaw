@@ -42,6 +42,7 @@ model User {
   subscription     Subscription?
   apiKeys          ApiKey[]
   notificationPreference NotificationPreference?
+  reviewedInvoices Invoice[]        @relation("InvoiceReviewer")
 
   @@map("users")
 }
@@ -200,6 +201,10 @@ model Invoice {
   lastViewedAt    DateTime?
   notes          String?
   terms          String?
+  reviewerId     String?         @db.ObjectId
+  reviewer       User?           @relation("InvoiceReviewer", fields: [reviewerId], references: [id])
+  reviewedAt     DateTime?
+  reviewNotes    String?
   deletedAt      DateTime?
   createdBy      String          @db.ObjectId
   updatedAt      DateTime        @updatedAt
@@ -455,6 +460,9 @@ enum EstimateStatus {
 
 enum InvoiceStatus {
   Draft
+  PendingReview
+  Approved
+  Rejected
   Sent
   Viewed
   PartiallyPaid

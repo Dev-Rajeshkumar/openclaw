@@ -122,6 +122,34 @@ export default function NewInvoicePage() {
     } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed'); } finally { setIsSubmitting(false); }
   };
 
+  const onSubmitForReview = async (formData: InvoiceFormData) => {
+    setIsSubmitting(true);
+    try {
+      const payload: any = {
+        ...formData,
+        clientId: formData.clientId || undefined,
+        invoiceTemplateId: selectedTemplate,
+        items: formData.items.map((item) => ({
+          ...item,
+          quantity: Number(item.quantity),
+          rate: Number(item.rate),
+          taxRate: watchedGstRate,
+          amount: Number(item.quantity) * Number(item.rate),
+        })),
+      };
+      if (isPremium && Object.keys(textOverrides).length > 0) {
+        payload.templateTextOverrides = textOverrides;
+      }
+      const { data } = await api.post('/invoices', payload);
+      if (data.success && data.data) {
+        // Immediately submit for review
+        await api.post(`/invoices/${(data.data as any).id}/submit-for-review`);
+        toast.success('Invoice created and submitted for review!');
+        router.push('/dashboard/invoices');
+      }
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed'); } finally { setIsSubmitting(false); }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
@@ -233,8 +261,11 @@ export default function NewInvoicePage() {
         </Card>
 
         <div className="flex flex-col sm:flex-row justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => router.back()} className="order-2 sm:order-1">Cancel</Button>
-          <Button type="submit" disabled={isSubmitting} className="order-1 sm:order-2">{isSubmitting ? <><Loader2 size={18} className="animate-spin mr-2" />Creating...</> : 'Create Invoice'}</Button>
+          <Button type="button" variant="outline" onClick={() => router.back()} className="order-3 sm:order-1">Cancel</Button>
+          <Button type="submit" disabled={isSubmitting} className="order-2 sm:order-2">{isSubmitting ? <><Loader2 size={18} className="animate-spin mr-2" />Creating...</> : 'Create Invoice'}</Button>
+          <Button type="button" disabled={isSubmitting} onClick={handleSubmit(onSubmitForReview)} className="order-1 sm:order-3 bg-amber-500 hover:bg-amber-600">
+            {isSubmitting ? <><Loader2 size={18} className="animate-spin mr-2" />Submitting...</> : 'Create & Submit for Review'}
+          </Button>
         </div>
       </form>
 

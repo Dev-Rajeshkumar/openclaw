@@ -45,6 +45,9 @@ export enum ClientStatus {
 
 export enum InvoiceStatus {
   Draft = 'Draft',
+  PendingReview = 'PendingReview',
+  Approved = 'Approved',
+  Rejected = 'Rejected',
   Sent = 'Sent',
   Viewed = 'Viewed',
   PartiallyPaid = 'PartiallyPaid',
@@ -198,6 +201,10 @@ export interface IInvoice {
   terms?: string;
   payments?: IPayment[];
   statusLogs?: IStatusLog[];
+  reviewerId?: string;
+  reviewer?: IUser;
+  reviewedAt?: string;
+  reviewNotes?: string;
   publicAccessToken?: string;
   viewCount?: number;
   lastViewedAt?: string;

@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, Eye, Trash2, MoreHorizontal, Filter, Download, Mail } from 'lucide-react';
-import { IInvoice, InvoiceStatus } from '@/types';
+import { Plus, Search, FileText, Eye, Trash2, MoreHorizontal, Filter, Download, Mail, CheckCircle, XCircle, Send, Zap } from 'lucide-react';
+import { IInvoice, InvoiceStatus, TeamRole } from '@/types';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -43,6 +43,40 @@ export default function InvoicesPage() {
   }, [page, search, statusFilter]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  const handleSubmitForReview = async (id: string) => {
+    try {
+      await api.post(`/invoices/${id}/submit-for-review`);
+      toast.success('Invoice submitted for review');
+      fetchInvoices();
+    } catch { toast.error('Failed to submit for review'); }
+  };
+
+  const handleApprove = async (id: string) => {
+    try {
+      await api.post(`/invoices/${id}/approve`);
+      toast.success('Invoice approved');
+      fetchInvoices();
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to approve'); }
+  };
+
+  const handleReject = async (id: string) => {
+    const notes = prompt('Rejection notes (optional):');
+    if (notes === null) return; // cancelled
+    try {
+      await api.post(`/invoices/${id}/reject`, { notes: notes || undefined });
+      toast.success('Invoice rejected');
+      fetchInvoices();
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to reject'); }
+  };
+
+  const handleSendApproved = async (id: string) => {
+    try {
+      await api.post(`/invoices/${id}/send`);
+      toast.success('Invoice sent to client');
+      fetchInvoices();
+    } catch (error: unknown) { toast.error(error instanceof Error ? error.message : 'Failed to send'); }
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this invoice?')) return;
@@ -142,8 +176,28 @@ export default function InvoicesPage() {
                       <span className="text-gray-500 dark:text-gray-400">{formatDate(inv.invoiceDate)}</span>
                       <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(inv.total)}</span>
                     </div>
-                    <div className="flex items-center gap-2 pt-1 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-gray-100 dark:border-gray-700">
                       <Link href={`/dashboard/invoices/${inv.id}`} className="flex-1"><Button variant="outline" size="sm" className="w-full"><Eye size={14} className="mr-1" /> View</Button></Link>
+                      {inv.status === InvoiceStatus.Draft && (
+                        <Button size="sm" variant="outline" onClick={() => handleSubmitForReview(inv.id)} className="text-amber-600 border-amber-300 hover:bg-amber-50 text-xs px-2">
+                          <Send size={12} className="mr-1" /> Review
+                        </Button>
+                      )}
+                      {inv.status === InvoiceStatus.PendingReview && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => handleApprove(inv.id)} className="text-green-600 border-green-300 hover:bg-green-50 text-xs px-2">
+                            <CheckCircle size={12} className="mr-1" /> Approve
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleReject(inv.id)} className="text-red-600 border-red-300 hover:bg-red-50 text-xs px-2">
+                            <XCircle size={12} className="mr-1" /> Reject
+                          </Button>
+                        </>
+                      )}
+                      {inv.status === InvoiceStatus.Approved && (
+                        <Button size="sm" variant="outline" onClick={() => handleSendApproved(inv.id)} className="text-blue-600 border-blue-300 hover:bg-blue-50 text-xs px-2">
+                          <Send size={12} className="mr-1" /> Send
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(inv.id)} className="text-red-500 dark:text-red-400"><Trash2 size={14} /></Button>
                     </div>
                   </div>
@@ -176,13 +230,23 @@ export default function InvoicesPage() {
                         <TableCell className="text-right font-semibold">{formatCurrency(inv.total)}</TableCell>
                         <TableCell><span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(inv.status)}`}>{inv.status}</span></TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal size={16} /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${inv.id}`} className="flex items-center gap-2"><Eye size={14} /> View</Link></DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDelete(inv.id)} className="text-red-600 flex items-center gap-2"><Trash2 size={14} /> Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex items-center justify-end gap-1">
+                            {inv.status === InvoiceStatus.PendingReview && (<>
+                              <Button variant="ghost" size="icon" onClick={() => handleApprove(inv.id)} className="text-green-600" title="Approve"><CheckCircle size={16} /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleReject(inv.id)} className="text-red-500" title="Reject"><XCircle size={16} /></Button>
+                            </>)}
+                            {inv.status === InvoiceStatus.Approved && (
+                              <Button variant="ghost" size="icon" onClick={() => handleSendApproved(inv.id)} className="text-blue-600" title="Send"><Send size={16} /></Button>
+                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal size={16} /></Button></DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${inv.id}`} className="flex items-center gap-2"><Eye size={14} /> View</Link></DropdownMenuItem>
+                                {inv.status === InvoiceStatus.Draft && <DropdownMenuItem onClick={() => handleSubmitForReview(inv.id)} className="flex items-center gap-2"><Send size={14} /> Submit for Review</DropdownMenuItem>}
+                                <DropdownMenuItem onClick={() => handleDelete(inv.id)} className="text-red-600 flex items-center gap-2"><Trash2 size={14} /> Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
