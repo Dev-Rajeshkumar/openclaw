@@ -82,7 +82,7 @@ export default function DevelopersPage() {
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Code size={24} /> Developer API
         </h1>
-        <p className="text-gray-500">Manage API keys and integrate BillingBee with your applications</p>
+        <p className="text-gray-500 dark:text-gray-400">Manage API keys and integrate BillingBee with your applications</p>
       </div>
 
       {/* Created Key Banner */}
@@ -91,15 +91,15 @@ export default function DevelopersPage() {
           <div className="flex items-start gap-2">
             <AlertTriangle size={20} className="text-amber-600 mt-0.5 shrink-0" />
             <div>
-              <p className="font-semibold text-amber-800">API Key Created</p>
-              <p className="text-sm text-amber-700">Copy this key now — it won&apos;t be shown again.</p>
+              <p className="font-semibold text-amber-800 dark:text-amber-200">API Key Created</p>
+              <p className="text-sm text-amber-700 dark:text-amber-300">Copy this key now — it won&apos;t be shown again.</p>
             </div>
             <Button size="sm" variant="ghost" onClick={handleDismissCreated} className="ml-auto text-amber-600 hover:text-amber-800">
               Dismiss
             </Button>
           </div>
-          <div className="bg-white rounded-lg border border-amber-200 p-3 flex items-center gap-3">
-            <code className="flex-1 text-sm font-mono text-gray-900 break-all select-all">{createdKey.key}</code>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-amber-200 dark:border-amber-800 p-3 flex items-center gap-3">
+            <code className="flex-1 text-sm font-mono text-gray-900 dark:text-amber-300 break-all select-all">{createdKey.key}</code>
             <Button size="sm" variant="outline" onClick={() => handleCopy(createdKey.key)} className="shrink-0 border-amber-300">
               <Copy size={14} className="mr-1" /> Copy
             </Button>
@@ -117,7 +117,7 @@ export default function DevelopersPage() {
             {loading ? (
               <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500" /></div>
             ) : keys.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-gray-400 dark:text-gray-500">
                 <Shield size={32} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No API keys yet</p>
                 <p className="text-xs">Create one to get started</p>
@@ -125,11 +125,11 @@ export default function DevelopersPage() {
             ) : (
               <div className="space-y-3">
                 {keys.map((k) => (
-                  <div key={k.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div key={k.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 text-sm">{k.name}</p>
-                      <p className="text-xs font-mono text-gray-400">{k.key}</p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">{k.name}</p>
+                      <p className="text-xs font-mono text-gray-400 dark:text-gray-500">{k.key}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                         Created {new Date(k.createdAt).toLocaleDateString()}
                         {k.lastUsedAt && ` · Last used ${new Date(k.lastUsedAt).toLocaleDateString()}`}
                       </p>
@@ -180,7 +180,7 @@ export default function DevelopersPage() {
         <CardContent className="space-y-6">
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-2">Base URL</h4>
-            <div className="bg-gray-900 rounded-lg p-3 flex items-center gap-2">
+            <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-3 flex items-center gap-2">
               <code className="text-green-400 text-sm flex-1">http://localhost:3001/api/v1</code>
               <Button size="sm" variant="ghost" onClick={() => handleCopy('http://localhost:3001/api/v1')} className="text-gray-400 hover:text-white shrink-0">
                 <Copy size={14} />
@@ -191,7 +191,7 @@ export default function DevelopersPage() {
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-2">Authentication</h4>
             <p className="text-sm text-gray-500 mb-2">Include your API key in the Authorization header:</p>
-            <div className="bg-gray-900 rounded-lg p-3">
+            <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-3">
               <code className="text-green-400 text-sm">Authorization: Bearer bbk_your_api_key_here</code>
             </div>
           </div>
@@ -212,8 +212,8 @@ export default function DevelopersPage() {
                   <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                     {ep.method}
                   </span>
-                  <code className="text-gray-700 text-xs flex-1">{ep.path}</code>
-                  <span className="text-gray-400 text-xs hidden sm:block">{ep.desc}</span>
+                  <code className="text-gray-700 dark:text-gray-300 text-xs flex-1">{ep.path}</code>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs hidden sm:block">{ep.desc}</span>
                 </div>
               ))}
             </div>
@@ -221,7 +221,7 @@ export default function DevelopersPage() {
 
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-2">Example cURL Request</h4>
-            <div className="bg-gray-900 rounded-lg p-3 overflow-x-auto">
+            <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-3 overflow-x-auto">
               <pre className="text-green-400 text-xs whitespace-pre-wrap">{`curl -X GET "http://localhost:3001/api/v1/businesses/YOUR_BUSINESS_ID/invoices" \\
   -H "Authorization: Bearer bbk_your_api_key_here"`}</pre>
             </div>
