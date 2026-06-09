@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye, CopyPlus, MessageCircle, MessageSquareText } from 'lucide-react';
-import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, ITemplateTextOverrides, SubscriptionPlan } from '@/types';
+import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye, CopyPlus, MessageCircle, MessageSquareText, Paperclip, Upload, X, FileIcon, Loader2 } from 'lucide-react';
+import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, ITemplateTextOverrides, SubscriptionPlan, IFile } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '@/lib/utils';
-import api from '@/lib/api';
+import api, { getActiveBusiness } from '@/lib/api';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TemplateTextEditor } from '@/components/TemplateTextEditor';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useRef } from 'react';
 
 const ALL_TEMPLATES: IInvoiceTemplate[] = [
   { id: 'builtin_classic', name: 'Classic', slug: 'classic', description: 'Split header, bordered table', isBuiltIn: true, layout: { primaryColor: '#1a1a2e', accentColor: '#e94560', fontFamily: 'Helvetica', headerStyle: 'split-left-right', tableStyle: 'bordered-rows', footerText: 'Thank you!', labelInvoiceTitle: 'TAX INVOICE', labelBillTo: 'Bill To:', labelNotes: 'Notes:', labelTerms: 'Terms & Conditions:', labelSubtotal: 'Subtotal:', labelDiscount: 'Discount:', labelTax: 'Tax:', labelTotal: 'Total:', tier: '' } },
@@ -55,6 +56,11 @@ export default function InvoiceDetailPage() {
   const [followUpMessages, setFollowUpMessages] = useState<string[]>([]);
   const [followUpDays, setFollowUpDays] = useState(0);
   const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [attachments, setAttachments] = useState<IFile[]>([]);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isPremium = userPlan === SubscriptionPlan.Professional || userPlan === SubscriptionPlan.Business;
 
   const availableTemplates = useMemo(() => {
@@ -80,6 +86,16 @@ export default function InvoiceDetailPage() {
         const { data: bizData } = await api.get('/businesses');
         if (bizData.success && bizData.data && bizData.data.length > 0) setUserPlan(bizData.data[0].plan || 'Free');
       } catch { /* ignore */ }
+      // Load attachments
+      try {
+        const businessId = getActiveBusiness();
+        if (businessId) {
+          const { data: filesData } = await api.get(`/v1/businesses/${businessId}/files?entityType=Invoice&entityId=${id}`);
+          if (filesData.success && filesData.data) {
+            setAttachments(filesData.data as IFile[]);
+          }
+        }
+      } catch { /* ignore attachment load errors */ }
       setLoading(false);
     };
     init();
@@ -154,6 +170,74 @@ export default function InvoiceDetailPage() {
         toast.error('Failed to generate follow-up messages');
       }
     } catch { toast.error('Failed to generate follow-up messages'); } finally { setFollowUpLoading(false); }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  };
+
+  const fetchAttachments = async () => {
+    if (!invoice?.businessId) return;
+    setAttachmentsLoading(true);
+    try {
+      const { data: filesData } = await api.get(`/v1/businesses/${invoice.businessId}/files?entityType=Invoice&entityId=${id}`);
+      if (filesData.success && filesData.data) {
+        setAttachments(filesData.data as IFile[]);
+      }
+    } catch { toast.error('Failed to load attachments'); }
+    finally { setAttachmentsLoading(false); }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !invoice?.businessId) return;
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('entityType', 'Invoice');
+      formData.append('entityId', id);
+      await api.post(`/v1/businesses/${invoice.businessId}/files`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            setUploadProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+          }
+        },
+      });
+      toast.success('File attached successfully');
+      await fetchAttachments();
+    } catch { toast.error('Failed to upload file'); }
+    finally {
+      setUploading(false);
+      setUploadProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    if (!confirm('Delete this attachment?')) return;
+    if (!invoice?.businessId) return;
+    try {
+      await api.delete(`/v1/businesses/${invoice.businessId}/files/${fileId}`);
+      toast.success('Attachment deleted');
+      setAttachments((prev) => prev.filter((f) => f.id !== fileId));
+    } catch { toast.error('Failed to delete attachment'); }
+  };
+
+  const handleDownloadFile = (fileUrl: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.download = fileName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDownloadPDF = () => {
@@ -306,6 +390,100 @@ export default function InvoiceDetailPage() {
           </div>
 
           {invoice.notes && (<div className="mt-6 p-4 bg-gray-50 rounded-lg"><p className="text-sm font-medium text-gray-500 mb-1">Notes</p><p className="text-sm text-gray-700">{invoice.notes}</p></div>)}
+        </CardContent>
+      </Card>
+
+      {/* Attachments Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Paperclip size={18} /> Attachments
+            {attachments.length > 0 && (
+              <span className="text-sm font-normal text-gray-500">({attachments.length} file{attachments.length > 1 ? 's' : ''})</span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* File list */}
+          {attachmentsLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 size={20} className="animate-spin text-gray-400" />
+            </div>
+          ) : attachments.length > 0 ? (
+            <div className="space-y-2">
+              {attachments.map((file) => (
+                <div key={file.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors bg-gray-50/50">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center">
+                    <FileIcon size={18} className="text-amber-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{file.fileName}</p>
+                    <p className="text-xs text-gray-500">
+                      {formatFileSize(file.size)} · {formatDate(file.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDownloadFile(file.fileUrl, file.fileName)}
+                      className="text-gray-400 hover:text-blue-600"
+                      title="Download"
+                    >
+                      <Download size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteFile(file.id)}
+                      className="text-gray-400 hover:text-red-600"
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Paperclip size={28} className="text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-400">No files attached yet</p>
+            </div>
+          )}
+
+          {/* File input (hidden) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+
+          {/* Upload area */}
+          {uploading ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-amber-600">
+                <Loader2 size={16} className="animate-spin" />
+                <span>Uploading... {uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-amber-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full border-dashed border-2 border-gray-300 hover:border-amber-400 hover:bg-amber-50/50 text-gray-500 hover:text-amber-700"
+            >
+              <Upload size={16} className="mr-2" /> Attach File
+            </Button>
+          )}
         </CardContent>
       </Card>
 
