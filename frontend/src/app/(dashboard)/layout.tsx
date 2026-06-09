@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, Users, Settings, LogOut,
   Menu, X, ChevronDown, Building2, Plus, Activity, Receipt,
   ClipboardList, Repeat, CreditCard, Bell, BarChart3, UserCog, FolderOpen, Package, Percent,
-  Home, Wand2, Sparkles,
+  Home, Wand2, Sparkles, Crown,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { CommandPalette } from '@/components/CommandPalette';
@@ -30,6 +30,7 @@ const navItems = [
   { href: '/dashboard/ai-invoice', label: 'AI Invoice', icon: Wand2 },
   { href: '/dashboard/ai-invoice/insights', label: 'AI Insights', icon: Sparkles },
   { href: '/dashboard/gst', label: 'GST Reports', icon: Percent },
+  { href: '/dashboard/subscription', label: 'Subscription', icon: Crown },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -38,7 +39,7 @@ const mobileNavItems = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/dashboard/invoices', label: 'Invoices', icon: FileText },
   { href: '/dashboard/clients', label: 'Clients', icon: Users },
-  { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/dashboard/subscription', label: 'Subscription', icon: Crown },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 

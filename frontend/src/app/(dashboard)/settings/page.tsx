@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Save, Loader2, User, Lock, Building2, Crown, FileText, Mail, Palette, Star, CreditCard, Check } from 'lucide-react';
+import Link from 'next/link';
+import { Save, Loader2, User, Lock, Building2, Crown, FileText, Mail, Palette, Star, CreditCard, Check, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { profileSchema, ProfileFormData, changePasswordSchema, ChangePasswordFormData } from '@/lib/validations';
 import { IUser, IBusiness, SubscriptionPlan, CurrencyCode, IInvoiceTemplate } from '@/types';
@@ -443,6 +444,18 @@ export default function SettingsPage() {
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+
+              {/* Link to full subscription management */}
+              <div className="pt-4 border-t border-gray-100">
+                <Link href="/dashboard/subscription">
+                  <Button variant="outline" className="w-full border-amber-200 text-amber-700 hover:bg-amber-50">
+                    <Crown size={16} className="mr-2" />
+                    Manage Subscription
+                    <ArrowRight size={16} className="ml-auto" />
+                  </Button>
+                </Link>
+                <p className="text-xs text-gray-400 mt-2 text-center">View usage, billing history, and manage your plan</p>
               </div>
             </>
           )}
