@@ -31,6 +31,7 @@ import productRoutes from './routes/product.routes.js';
 import publicInvoiceRoutes from './routes/publicInvoice.routes.js';
 import razorpayPaymentRoutes from './routes/razorpayPayment.routes.js';
 import clientPortalRoutes from './routes/clientPortal.routes.js';
+import aiInvoiceRoutes from './routes/aiInvoice.routes.js';
 import gstRoutes from './routes/gst.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import invoiceTemplateRoutes from './routes/invoiceTemplate.routes.js';
@@ -107,6 +108,9 @@ app.use(activityLogger);
 // ─── Error Handling ─────────────────────────────────────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
+
+// ─── AI Routes ──────────────────────────────────────────────────
+app.use(`${API_PREFIX}/ai`, aiInvoiceRoutes);
 
 // ─── Cron Jobs ────────────────────────────────────────────────────
 // Run recurring invoice processor every hour
