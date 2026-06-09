@@ -38,30 +38,49 @@ export default function NewInvoicePage() {
     defaultValues: { gstRate: 18, items: [{ description: '', hsnCode: '', quantity: 1, rate: 0 }], clientId: '', notes: '' },
   });
 
-  // Pre-fill from AI invoice data
-  useEffect(() => {
-    const aiData = sessionStorage.getItem('ai_invoice_data');
-    if (aiData) {
-      try {
-        const parsed = JSON.parse(aiData);
-        if (parsed.items && parsed.items.length > 0) {
-          // Set GST rate
-          if (parsed.taxRate) setValue('gstRate', parsed.taxRate);
-          // Note: items are managed by useFieldArray, so we need to handle this differently
-          // For now, just store the data for the user to see
-          toast.success('AI invoice data loaded! Review and adjust as needed.');
-        }
-        sessionStorage.removeItem('ai_invoice_data');
-      } catch { /* ignore */ }
-    }
-  }, [setValue]);
-
-  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
+  const { fields, append, remove, replace } = useFieldArray({ control, name: 'items' });
   const watchedItems = watch('items');
   const watchedGstRate = watch('gstRate') || 18;
   const subtotal = watchedItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0);
   const gstAmount = Math.round((subtotal * watchedGstRate) / 100 * 100) / 100;
   const total = Math.round((subtotal + gstAmount) * 100) / 100;
+
+  // Pre-fill from AI invoice data (runs once clients are loaded)
+  useEffect(() => {
+    const aiData = sessionStorage.getItem('ai_invoice_data');
+    if (!aiData) return;
+    try {
+      const parsed = JSON.parse(aiData);
+      if (!parsed || !parsed.items || parsed.items.length === 0) {
+        sessionStorage.removeItem('ai_invoice_data');
+        return;
+      }
+      // Set GST rate
+      if (parsed.taxRate) setValue('gstRate', parsed.taxRate);
+      // Set notes
+      if (parsed.notes) setValue('notes', parsed.notes);
+      // Replace items using useFieldArray replace
+      const newItems = parsed.items.map((item: any) => ({
+        description: item.description || '',
+        hsnCode: item.hsnCode || '',
+        quantity: 1,
+        rate: Number(item.amount) || 0,
+      }));
+      replace(newItems);
+      // Fuzzy match client
+      if (parsed.clientName && clients.length > 0) {
+        const search = parsed.clientName.toLowerCase().trim();
+        const match = clients.find((c) =>
+          c.name.toLowerCase().includes(search) || search.includes(c.name.toLowerCase())
+        );
+        if (match) {
+          setValue('clientId', match.id);
+        }
+      }
+      toast.success(`Loaded ${newItems.length} item${newItems.length > 1 ? 's' : ''} from AI invoice`);
+      sessionStorage.removeItem('ai_invoice_data');
+    } catch { sessionStorage.removeItem('ai_invoice_data'); }
+  }, [clients.length, replace, setValue]);
 
   useEffect(() => {
     api.get('/clients?limit=100').then(({ data }) => {

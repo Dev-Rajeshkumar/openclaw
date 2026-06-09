@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye, CopyPlus, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Trash2, Clock, FileText, Download, Mail, Palette, Settings2, Link, Copy, Eye, CopyPlus, MessageCircle, MessageSquareText } from 'lucide-react';
 import { IInvoice, InvoiceStatus, IStatusLog, IInvoiceTemplate, ITemplateTextOverrides, SubscriptionPlan } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TemplateTextEditor } from '@/components/TemplateTextEditor';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 const ALL_TEMPLATES: IInvoiceTemplate[] = [
   { id: 'builtin_classic', name: 'Classic', slug: 'classic', description: 'Split header, bordered table', isBuiltIn: true, layout: { primaryColor: '#1a1a2e', accentColor: '#e94560', fontFamily: 'Helvetica', headerStyle: 'split-left-right', tableStyle: 'bordered-rows', footerText: 'Thank you!', labelInvoiceTitle: 'TAX INVOICE', labelBillTo: 'Bill To:', labelNotes: 'Notes:', labelTerms: 'Terms & Conditions:', labelSubtotal: 'Subtotal:', labelDiscount: 'Discount:', labelTax: 'Tax:', labelTotal: 'Total:', tier: '' } },
@@ -50,6 +51,10 @@ export default function InvoiceDetailPage() {
   const [userPlan, setUserPlan] = useState<string>('Free');
   const [showTextEditor, setShowTextEditor] = useState(false);
   const [textOverrides, setTextOverrides] = useState<ITemplateTextOverrides>({});
+  const [showFollowUp, setShowFollowUp] = useState(false);
+  const [followUpMessages, setFollowUpMessages] = useState<string[]>([]);
+  const [followUpDays, setFollowUpDays] = useState(0);
+  const [followUpLoading, setFollowUpLoading] = useState(false);
   const isPremium = userPlan === SubscriptionPlan.Professional || userPlan === SubscriptionPlan.Business;
 
   const availableTemplates = useMemo(() => {
@@ -137,6 +142,20 @@ export default function InvoiceDetailPage() {
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
+  const handleFollowUp = async () => {
+    setFollowUpLoading(true);
+    try {
+      const { data } = await api.get(`/ai/follow-up/${id}`);
+      if (data.success && data.data) {
+        setFollowUpMessages(data.data.messages || []);
+        setFollowUpDays(data.data.daysOverdue || 0);
+        setShowFollowUp(true);
+      } else {
+        toast.error('Failed to generate follow-up messages');
+      }
+    } catch { toast.error('Failed to generate follow-up messages'); } finally { setFollowUpLoading(false); }
+  };
+
   const handleDownloadPDF = () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
     const businessId = invoice?.businessId || '';
@@ -178,6 +197,7 @@ export default function InvoiceDetailPage() {
             </div>
           )}
           <Button onClick={handleDownloadPDF} disabled={actionLoading} variant="outline" size="sm"><Download size={14} className="mr-1" /> PDF</Button>
+          <Button onClick={handleFollowUp} disabled={actionLoading || followUpLoading} variant="outline" size="sm"><MessageSquareText size={14} className="mr-1" /> Follow-Up</Button>
           <Button onClick={handleDelete} disabled={actionLoading} variant="destructive" size="sm"><Trash2 size={14} className="mr-1" /> Delete</Button>
         </div>
       </div>
@@ -333,6 +353,42 @@ export default function InvoiceDetailPage() {
           isPremium={isPremium}
         />
       )}
+
+      {/* Follow-Up Messages Dialog */}
+      <Dialog open={showFollowUp} onOpenChange={setShowFollowUp}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><MessageSquareText size={20} className="text-amber-500" /> Follow-Up Messages</DialogTitle>
+            <DialogDescription>
+              {followUpDays > 0
+                ? `This invoice is ${followUpDays} day${followUpDays > 1 ? 's' : ''} overdue. Choose a message to send:`
+                : 'AI-generated follow-up messages for this invoice:'}
+            </DialogDescription>
+          </DialogHeader>
+          {followUpDays === 0 && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              This invoice is not yet overdue, but you can still use these messages as payment reminders.
+            </p>
+          )}
+          <div className="space-y-3 mt-2">
+            {followUpMessages.map((msg, i) => (
+              <div key={i} className="group relative bg-gray-50 border border-gray-200 rounded-lg p-4 hover:border-amber-300 transition-colors">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap pr-8">{msg}</p>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(msg); toast.success('Message copied!'); }}
+                  className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-200 transition-all"
+                  title="Copy message"
+                >
+                  <Copy size={14} className="text-gray-500" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end mt-2">
+            <Button variant="outline" size="sm" onClick={() => setShowFollowUp(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
