@@ -11,6 +11,8 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
 import { CommandPalette } from '@/components/CommandPalette';
+import OfflineIndicator from '@/components/OfflineIndicator';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { cn, formatCurrency } from '@/lib/utils';
 import { IBusiness } from '@/types';
 
@@ -177,6 +179,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <main className="p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-8">{children}</main>
       </div>
+
+      <OfflineIndicator />
+      <PWAInstallPrompt />
 
       {/* Mobile bottom navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-30 md:hidden safe-area-bottom">
