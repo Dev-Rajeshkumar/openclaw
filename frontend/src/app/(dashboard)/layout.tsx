@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, Users, Settings, LogOut,
   Menu, X, ChevronDown, Building2, Plus, Activity, Receipt,
   ClipboardList, Repeat, CreditCard, Bell, BarChart3, UserCog, FolderOpen, Package, Percent,
-  Home, Wand2, Sparkles, Crown, Sun, Moon, Code,
+  Home, Wand2, Sparkles, Crown, Sun, Moon, Code, BellRing, Zap,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
@@ -27,6 +27,7 @@ const navItems = [
   { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
   { href: '/dashboard/activity', label: 'Activity Log', icon: Activity },
   { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
+  { href: '/dashboard/reminders', label: 'Reminders', icon: BellRing },
   { href: '/dashboard/team', label: 'Team', icon: UserCog },
   { href: '/dashboard/files', label: 'Files', icon: FolderOpen },
   { href: '/dashboard/products', label: 'Products', icon: Package },
@@ -36,6 +37,13 @@ const navItems = [
   { href: '/dashboard/subscription', label: 'Subscription', icon: Crown },
   { href: '/dashboard/developers', label: 'Developers', icon: Code },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+];
+
+const quickActions = [
+  { href: '/dashboard/invoices/quick', label: 'Quick Invoice', icon: Zap },
+  { href: '/dashboard/invoices/new', label: 'New Invoice', icon: Plus },
+  { href: '/dashboard/clients/new', label: 'New Client', icon: Users },
+  { href: '/dashboard/ai-invoice', label: 'AI Invoice', icon: Wand2 },
 ];
 
 // Bottom nav items for mobile (top 5 most used)

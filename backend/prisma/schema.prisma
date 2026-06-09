@@ -572,3 +572,18 @@ model InvoiceViewLog {
 
   @@map("invoice_view_logs")
 }
+
+model ReminderSchedule {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  businessId      String   @db.ObjectId
+  name            String   @default("Default")
+  daysBefore      Int      @default(3)
+  onDueDate       Boolean  @default(true)
+  daysAfter       Int[]    @default([7, 14, 30])
+  emailEnabled    Boolean  @default(true)
+  whatsappEnabled Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("reminder_schedules")
+}

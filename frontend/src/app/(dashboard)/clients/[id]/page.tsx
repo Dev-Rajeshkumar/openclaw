@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2, Mail, Phone, MapPin, FileText, IndianRupee, Building2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Mail, Phone, MapPin, FileText, IndianRupee, Building2, BarChart3 } from 'lucide-react';
 import { IClient, IInvoice, InvoiceStatus } from '@/types';
 import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
@@ -54,6 +54,9 @@ export default function ClientDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link href={`/dashboard/clients/${id}/insights`}>
+            <Button variant="outline"><BarChart3 size={16} className="mr-2" /> Insights</Button>
+          </Link>
           <Button onClick={handleDelete} variant="destructive"><Trash2 size={16} className="mr-2" /> Delete</Button>
         </div>
       </div>
