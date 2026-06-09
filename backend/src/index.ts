@@ -35,6 +35,8 @@ import aiInvoiceRoutes from './routes/aiInvoice.routes.js';
 import gstRoutes from './routes/gst.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import invoiceTemplateRoutes from './routes/invoiceTemplate.routes.js';
+import apiKeyRoutes from './routes/apiKey.routes.js';
+import notificationPreferenceRoutes from './routes/notificationPreference.routes.js';
 
 const app = express();
 const API_PREFIX = `/api/${config.apiVersion}`;
@@ -90,6 +92,8 @@ app.use(`${API_PREFIX}/businesses/:businessId/products`, productRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/gst`, gstRoutes);
 app.use(`${API_PREFIX}/subscriptions`, subscriptionRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/invoice-templates`, invoiceTemplateRoutes);
+app.use(`${API_PREFIX}/api-keys`, apiKeyRoutes);
+app.use(`${API_PREFIX}/notification-preferences`, notificationPreferenceRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/team`, teamRoutes);
 app.use(`${API_PREFIX}/activity-logs`, activityLogRoutes);
 app.use(`${API_PREFIX}/status-logs`, statusLogRoutes);

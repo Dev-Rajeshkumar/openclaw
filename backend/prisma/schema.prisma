@@ -40,6 +40,8 @@ model User {
   files            File[]
   notifications    Notification[]
   subscription     Subscription?
+  apiKeys          ApiKey[]
+  notificationPreference NotificationPreference?
 
   @@map("users")
 }
@@ -79,6 +81,7 @@ model Business {
   teamMembers     TeamMember[]
   invitations     Invitation[]
   files           File[]
+  invoiceTemplates InvoiceTemplate[]
 
   @@map("businesses")
 }
@@ -206,7 +209,6 @@ model Invoice {
   client          Client?          @relation(fields: [clientId], references: [id])
   recurringInvoice RecurringInvoice? @relation(fields: [recurringId], references: [id])
   payments        Payment[]
-  files           File[]
 
   @@map("invoices")
 }
@@ -520,6 +522,37 @@ enum SubscriptionStatus {
   Inactive
   Cancelled
   PastDue
+}
+
+model ApiKey {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String    @db.ObjectId
+  user       User      @relation(fields: [userId], references: [id])
+  name       String
+  keyHash    String
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  deletedAt  DateTime?
+
+  @@map("api_keys")
+}
+
+model NotificationPreference {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @unique @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id])
+  emailInvoice  Boolean  @default(true)
+  emailPayment  Boolean  @default(true)
+  emailReminder Boolean  @default(true)
+  emailTeam     Boolean  @default(true)
+  pushInvoice   Boolean  @default(true)
+  pushPayment   Boolean  @default(true)
+  pushReminder  Boolean  @default(true)
+  pushTeam      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("notification_preferences")
 }
 
 model InvoiceViewLog {

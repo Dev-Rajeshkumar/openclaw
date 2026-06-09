@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { Save, Loader2, User, Lock, Building2, Crown, FileText, Mail, Palette, Star, CreditCard, Check, ArrowRight } from 'lucide-react';
+import { Save, Loader2, User, Lock, Building2, Crown, FileText, Mail, Palette, Star, CreditCard, Check, ArrowRight, Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { profileSchema, ProfileFormData, changePasswordSchema, ChangePasswordFormData } from '@/lib/validations';
 import { IUser, IBusiness, SubscriptionPlan, CurrencyCode, IInvoiceTemplate } from '@/types';
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const TEMPLATE_PREVIEWS: { slug: string; name: string; colors: string[]; premium: boolean; tier?: string }[] = [
@@ -46,9 +47,21 @@ const TEMPLATE_PREVIEWS: { slug: string; name: string; colors: string[]; premium
 export default function SettingsPage() {
   const { user, updateUser, businesses, activeBusiness, setActiveBusiness, fetchBusinesses } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
   const [showAddBusiness, setShowAddBusiness] = useState(false);
   const [newBusinessName, setNewBusinessName] = useState('');
   const [defaultTemplate, setDefaultTemplate] = useState('classic');
+  const [prefs, setPrefs] = useState({
+    emailInvoice: true,
+    emailPayment: true,
+    emailReminder: true,
+    emailTeam: true,
+    pushInvoice: true,
+    pushPayment: true,
+    pushReminder: true,
+    pushTeam: true,
+  });
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -89,6 +102,18 @@ export default function SettingsPage() {
       });
     }
   }, [activeBusiness, businessForm]);
+
+  // Fetch notification preferences
+  useEffect(() => {
+    if (prefsLoaded) return;
+    const fetchPrefs = async () => {
+      try {
+        const { data } = await api.get('/notification-preferences');
+        if (data.success) setPrefs(data.data);
+      } catch { /* use defaults */ } finally { setPrefsLoaded(true); }
+    };
+    fetchPrefs();
+  }, [prefsLoaded]);
 
   const onProfileSubmit = async (data: ProfileFormData) => {
     setSaving(true);
@@ -149,6 +174,18 @@ export default function SettingsPage() {
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : 'Failed'); } finally { setSaving(false); }
   };
 
+  const handleSavePrefs = async () => {
+    setSavingPrefs(true);
+    try {
+      await api.put('/notification-preferences', prefs);
+      toast.success('Notification preferences saved');
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : 'Failed to save'); } finally { setSavingPrefs(false); }
+  };
+
+  const updatePref = (key: keyof typeof prefs, value: boolean) => {
+    setPrefs((prev) => ({ ...prev, [key]: value }));
+  };
+
   const isPremiumTemplate = (slug: string) => {
     const t = TEMPLATE_PREVIEWS.find((p) => p.slug === slug);
     if (!t || !t.premium) return false;
@@ -162,7 +199,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div><h1 className="text-2xl font-bold text-gray-900">Settings</h1><p className="text-gray-500">Manage your account and businesses</p></div>
+      <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1><p className="text-gray-500 dark:text-gray-400">Manage your account and businesses</p></div>
 
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList className="flex-wrap h-auto gap-1">
@@ -172,6 +209,7 @@ export default function SettingsPage() {
           <TabsTrigger value="templates" className="text-xs sm:text-sm">Templates</TabsTrigger>
           <TabsTrigger value="plan" className="text-xs sm:text-sm">Plan</TabsTrigger>
           <TabsTrigger value="payments" className="text-xs sm:text-sm">Payments</TabsTrigger>
+          <TabsTrigger value="notifications" className="text-xs sm:text-sm">Notifications</TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -187,12 +225,12 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input type="email" value={user?.email || ''} disabled className="bg-gray-50" />
-                  <p className="text-xs text-gray-400">Email cannot be changed</p>
+                  <Input type="email" value={user?.email || ''} disabled className="bg-gray-50 dark:bg-gray-800" />
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Email cannot be changed</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Phone</Label>
-                  <Input value={user?.phone || ''} disabled className="bg-gray-50" />
+                  <Input value={user?.phone || ''} disabled className="bg-gray-50 dark:bg-gray-800" />
                 </div>
                 <div className="space-y-2">
                   <Label>Currency</Label>
@@ -206,14 +244,14 @@ export default function SettingsPage() {
                         toast.success('Currency updated');
                       } catch { toast.error('Failed'); }
                     }}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 dark:text-white text-sm"
                   >
                     {Object.entries(CURRENCY_SYMBOLS).map(([code, symbol]) => <option key={code} value={code}>{symbol} {code}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
                   <Label>Timezone</Label>
-                  <Input value={user?.timezone || 'Asia/Kolkata'} disabled className="bg-gray-50" />
+                  <Input value={user?.timezone || 'Asia/Kolkata'} disabled className="bg-gray-50 dark:bg-gray-800" />
                 </div>
                 <Button type="submit" disabled={saving}>
                   {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />} Save Profile
@@ -261,7 +299,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               {showAddBusiness && (
-                <div className="flex gap-2 mb-4 p-3 bg-amber-50 rounded-lg">
+                <div className="flex gap-2 mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
                   <Input value={newBusinessName} onChange={(e) => setNewBusinessName(e.target.value)} placeholder="Business name..." />
                   <Button size="sm" onClick={handleAddBusiness} disabled={saving}>Create</Button>
                   <Button size="sm" variant="ghost" onClick={() => { setShowAddBusiness(false); setNewBusinessName(''); }}>Cancel</Button>
@@ -269,14 +307,14 @@ export default function SettingsPage() {
               )}
               <div className="space-y-3">
                 {businesses.map((b) => (
-                  <div key={b.id} className={`flex items-center justify-between p-4 rounded-lg border-2 ${activeBusiness?.id === b.id ? 'border-amber-400 bg-amber-50' : 'border-gray-100'}`}>
+                  <div key={b.id} className={`flex items-center justify-between p-4 rounded-lg border-2 ${activeBusiness?.id === b.id ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-gray-100 dark:border-gray-700'}`}>
                     <div className="flex items-center gap-3 min-w-0">
-                      <Building2 size={18} className="text-gray-400 shrink-0" />
+                      <Building2 size={18} className="text-gray-400 dark:text-gray-500 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{b.name}</p>
-                        <p className="text-xs text-gray-400">{b.plan} Plan • {b.invoicePrefix} prefix</p>
+                        <p className="font-medium text-gray-900 dark:text-white truncate">{b.name}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{b.plan} Plan • {b.invoicePrefix} prefix</p>
                       </div>
-                      {activeBusiness?.id === b.id && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Active</span>}
+                      {activeBusiness?.id === b.id && <span className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full shrink-0">Active</span>}
                     </div>
                     {activeBusiness?.id !== b.id && <Button size="sm" variant="outline" onClick={() => setActiveBusiness(b)} className="shrink-0">Switch</Button>}
                   </div>
@@ -299,8 +337,8 @@ export default function SettingsPage() {
                   <div className="space-y-2"><Label>Address</Label><Textarea {...businessForm.register('address')} rows={3} /></div>
 
                   {/* White Label Settings */}
-                  <div className="pt-4 border-t border-gray-100">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Branding & White Label</h4>
+                  <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Branding & White Label</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Primary Color</Label>
@@ -319,12 +357,12 @@ export default function SettingsPage() {
                       <div className="space-y-2">
                         <Label>Email From Name</Label>
                         <Input {...businessForm.register('emailFromName')} placeholder={activeBusiness?.name || 'Your Business'} />
-                        <p className="text-[10px] text-gray-400">Name shown in invoice emails</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">Name shown in invoice emails</p>
                       </div>
                       <div className="space-y-2">
                         <Label>Email Reply-To</Label>
                         <Input type="email" {...businessForm.register('emailReplyTo')} placeholder="your@email.com" />
-                        <p className="text-[10px] text-gray-400">Reply-to address for invoice emails</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">Reply-to address for invoice emails</p>
                       </div>
                     </div>
                   </div>
@@ -345,7 +383,7 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><Palette size={18} /> Invoice Templates</CardTitle>
-                  <p className="text-sm text-gray-500">Choose your default template. Premium templates require Professional or higher.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Choose your default template. Premium templates require Professional or higher.</p>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-[420px] overflow-y-auto pr-1">
@@ -358,9 +396,9 @@ export default function SettingsPage() {
                           onClick={() => !locked && handleSetDefaultTemplate(tp.slug)}
                           disabled={locked || saving}
                           className={`relative flex flex-col rounded-xl border-2 transition-all overflow-hidden ${
-                            isDefault ? 'border-amber-400 ring-2 ring-amber-200' :
-                            locked ? 'border-gray-100 opacity-50 cursor-not-allowed' :
-                            'border-gray-200 hover:border-amber-300 cursor-pointer'
+                            isDefault ? 'border-amber-400 ring-2 ring-amber-200 dark:ring-amber-800' :
+                            locked ? 'border-gray-100 dark:border-gray-700 opacity-50 cursor-not-allowed' :
+                            'border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600 cursor-pointer'
                           }`}
                         >
                           <div className="h-20 relative" style={{ background: `linear-gradient(135deg, ${tp.colors[0]}, ${tp.colors[1]})` }}>
@@ -387,7 +425,7 @@ export default function SettingsPage() {
                             )}
                           </div>
                           <div className="p-2">
-                            <p className="text-xs font-semibold text-gray-900">{tp.name}</p>
+                            <p className="text-xs font-semibold text-gray-900 dark:text-white">{tp.name}</p>
                           </div>
                         </button>
                       );
@@ -408,13 +446,13 @@ export default function SettingsPage() {
                 <CardContent>
                   <span className={`text-sm font-medium px-3 py-1 rounded-full ${getPlanColor(activeBusiness.plan)}`}>{activeBusiness.plan}</span>
                   <div className="mt-4 grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-lg font-bold text-gray-900">{activeBusiness.nextInvoiceNo - 1}</p>
-                      <p className="text-xs text-gray-500">Invoices Created</p>
+                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{activeBusiness.nextInvoiceNo - 1}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Invoices Created</p>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-lg font-bold text-gray-900">{businesses.length}</p>
-                      <p className="text-xs text-gray-500">Businesses</p>
+                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{businesses.length}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Businesses</p>
                     </div>
                   </div>
                 </CardContent>
@@ -426,17 +464,17 @@ export default function SettingsPage() {
                   { name: SubscriptionPlan.Professional, price: 799, features: ['200 invoices/mo', '100 clients', '12 templates', 'No branding', 'Priority support', 'API access', '3 businesses', 'Custom templates'] },
                   { name: SubscriptionPlan.Business, price: 2499, features: ['Unlimited invoices', 'Unlimited clients', '22 templates', 'Dedicated support', 'Custom integrations', 'Team roles', '10 businesses', 'Custom templates'] },
                 ].map((plan) => (
-                  <Card key={plan.name} className={activeBusiness.plan === plan.name ? 'border-amber-400 shadow-lg shadow-amber-100' : ''}>
+                  <Card key={plan.name} className={activeBusiness.plan === plan.name ? 'border-amber-400 shadow-lg shadow-amber-100 dark:shadow-amber-900/20' : ''}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <CardTitle>{plan.name}</CardTitle>
-                        {activeBusiness.plan === plan.name && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Current</span>}
+                        {activeBusiness.plan === plan.name && <span className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full">Current</span>}
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold mb-4">₹{plan.price}<span className="text-sm text-gray-400 font-normal">/mo</span></div>
+                      <div className="text-2xl font-bold mb-4">₹{plan.price}<span className="text-sm text-gray-400 dark:text-gray-500 font-normal">/mo</span></div>
                       <ul className="space-y-2 mb-6">
-                        {plan.features.map((f) => <li key={f} className="flex items-center gap-2 text-sm text-gray-600"><span className="text-green-500">✓</span>{f}</li>)}
+                        {plan.features.map((f) => <li key={f} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"><span className="text-green-500">✓</span>{f}</li>)}
                       </ul>
                       <Button className="w-full" variant={activeBusiness.plan === plan.name ? 'outline' : 'default'} onClick={() => handlePlanChange(plan.name)} disabled={activeBusiness.plan === plan.name || saving}>
                         {activeBusiness.plan === plan.name ? 'Current Plan' : 'Switch Plan'}
@@ -447,15 +485,15 @@ export default function SettingsPage() {
               </div>
 
               {/* Link to full subscription management */}
-              <div className="pt-4 border-t border-gray-100">
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
                 <Link href="/dashboard/subscription">
-                  <Button variant="outline" className="w-full border-amber-200 text-amber-700 hover:bg-amber-50">
+                  <Button variant="outline" className="w-full border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20">
                     <Crown size={16} className="mr-2" />
                     Manage Subscription
                     <ArrowRight size={16} className="ml-auto" />
                   </Button>
                 </Link>
-                <p className="text-xs text-gray-400 mt-2 text-center">View usage, billing history, and manage your plan</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">View usage, billing history, and manage your plan</p>
               </div>
             </>
           )}
@@ -464,17 +502,17 @@ export default function SettingsPage() {
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard size={20} /> Payment Settings</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-gray-500">Configure Razorpay to accept online payments from clients. Clients can pay directly from the invoice page.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Configure Razorpay to accept online payments from clients. Clients can pay directly from the invoice page.</p>
               <div className="grid gap-4">
                 <div className="space-y-2">
                   <Label>Razorpay Key ID</Label>
                   <Input id="razorpayKeyId" placeholder="rzp_live_..." type="text" />
-                  <p className="text-xs text-gray-400">Your Razorpay Key ID (starts with rzp_live_ or rzp_test_)</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Your Razorpay Key ID (starts with rzp_live_ or rzp_test_)</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Razorpay Key Secret</Label>
                   <Input id="razorpayKeySecret" placeholder="Enter your secret key" type="password" />
-                  <p className="text-xs text-gray-400">Your Razorpay Key Secret — stored securely</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Your Razorpay Key Secret — stored securely</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="razorpayEnabled" className="rounded" />
@@ -494,9 +532,96 @@ export default function SettingsPage() {
                 }}>
                   <Save size={16} className="mr-2" /> Save Settings
                 </Button>
-                <span id="razorpayStatus" className="text-xs text-gray-400 flex items-center gap-1">
+                <span id="razorpayStatus" className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
                   <Check size={12} className="text-green-500" /> Configure to enable "Pay Now" on invoices
                 </span>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="notifications" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Bell size={18} /> Notification Preferences</CardTitle>
+              <p className="text-sm text-gray-500">Choose how you want to receive notifications</p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Email Notifications */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2"><Mail size={16} /> Email Notifications</h4>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Invoice Sent</p>
+                      <p className="text-xs text-gray-400">Get notified when an invoice is sent to a client</p>
+                    </div>
+                    <Switch checked={prefs.emailInvoice} onCheckedChange={(v) => updatePref('emailInvoice', v)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Payment Received</p>
+                      <p className="text-xs text-gray-400">Get notified when a payment is received</p>
+                    </div>
+                    <Switch checked={prefs.emailPayment} onCheckedChange={(v) => updatePref('emailPayment', v)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Invoice Reminder</p>
+                      <p className="text-xs text-gray-400">Get reminded about overdue invoices</p>
+                    </div>
+                    <Switch checked={prefs.emailReminder} onCheckedChange={(v) => updatePref('emailReminder', v)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Team Invitation</p>
+                      <p className="text-xs text-gray-400">Get notified about team invitations</p>
+                    </div>
+                    <Switch checked={prefs.emailTeam} onCheckedChange={(v) => updatePref('emailTeam', v)} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Push Notifications */}
+              <div className="pt-4 border-t border-gray-100">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2"><Bell size={16} /> Push Notifications</h4>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Invoice Sent</p>
+                      <p className="text-xs text-gray-400">Receive push notification when an invoice is sent</p>
+                    </div>
+                    <Switch checked={prefs.pushInvoice} onCheckedChange={(v) => updatePref('pushInvoice', v)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Payment Received</p>
+                      <p className="text-xs text-gray-400">Receive push notification when a payment is received</p>
+                    </div>
+                    <Switch checked={prefs.pushPayment} onCheckedChange={(v) => updatePref('pushPayment', v)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Invoice Reminder</p>
+                      <p className="text-xs text-gray-400">Receive push reminder about overdue invoices</p>
+                    </div>
+                    <Switch checked={prefs.pushReminder} onCheckedChange={(v) => updatePref('pushReminder', v)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Team Invitation</p>
+                      <p className="text-xs text-gray-400">Receive push notification about team invitations</p>
+                    </div>
+                    <Switch checked={prefs.pushTeam} onCheckedChange={(v) => updatePref('pushTeam', v)} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Button onClick={handleSavePrefs} disabled={savingPrefs}>
+                  {savingPrefs
+                    ? <><Loader2 size={16} className="animate-spin mr-2" /> Saving...</>
+                    : <><Save size={16} className="mr-2" /> Save Preferences</>
+                }
               </div>
             </CardContent>
           </Card>
