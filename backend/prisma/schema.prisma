@@ -58,6 +58,12 @@ model Business {
   razorpayKeyId  String?
   razorpayKeySecret String?
   razorpayEnabled Boolean @default(false)
+  primaryColor   String?   @default("#f59e0b")
+  accentColor    String?   @default("#1a1a2e")
+  customDomain   String?
+  whiteLabelEnabled Boolean @default(false)
+  emailFromName  String?
+  emailReplyTo   String?
   deletedAt      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

@@ -66,6 +66,10 @@ export default function SettingsPage() {
       phone: activeBusiness?.phone || '',
       address: activeBusiness?.address || '',
       invoicePrefix: activeBusiness?.invoicePrefix || 'INV',
+      primaryColor: activeBusiness?.primaryColor || '#f59e0b',
+      accentColor: activeBusiness?.accentColor || '#1a1a2e',
+      emailFromName: activeBusiness?.emailFromName || '',
+      emailReplyTo: activeBusiness?.emailReplyTo || '',
     },
   });
 
@@ -77,6 +81,10 @@ export default function SettingsPage() {
         phone: activeBusiness.phone || '',
         address: activeBusiness.address || '',
         invoicePrefix: activeBusiness.invoicePrefix || 'INV',
+        primaryColor: activeBusiness.primaryColor || '#f59e0b',
+        accentColor: activeBusiness.accentColor || '#1a1a2e',
+        emailFromName: activeBusiness.emailFromName || '',
+        emailReplyTo: activeBusiness.emailReplyTo || '',
       });
     }
   }, [activeBusiness, businessForm]);
@@ -288,6 +296,38 @@ export default function SettingsPage() {
                     <div className="space-y-2"><Label>Invoice Prefix</Label><Input {...businessForm.register('invoicePrefix')} placeholder="INV" /></div>
                   </div>
                   <div className="space-y-2"><Label>Address</Label><Textarea {...businessForm.register('address')} rows={3} /></div>
+
+                  {/* White Label Settings */}
+                  <div className="pt-4 border-t border-gray-100">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Branding & White Label</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Primary Color</Label>
+                        <div className="flex items-center gap-2">
+                          <Input type="color" {...businessForm.register('primaryColor')} className="w-12 h-9 p-0.5 rounded cursor-pointer" />
+                          <Input {...businessForm.register('primaryColor')} placeholder="#f59e0b" className="flex-1" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Accent Color</Label>
+                        <div className="flex items-center gap-2">
+                          <Input type="color" {...businessForm.register('accentColor')} className="w-12 h-9 p-0.5 rounded cursor-pointer" />
+                          <Input {...businessForm.register('accentColor')} placeholder="#1a1a2e" className="flex-1" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email From Name</Label>
+                        <Input {...businessForm.register('emailFromName')} placeholder={activeBusiness?.name || 'Your Business'} />
+                        <p className="text-[10px] text-gray-400">Name shown in invoice emails</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email Reply-To</Label>
+                        <Input type="email" {...businessForm.register('emailReplyTo')} placeholder="your@email.com" />
+                        <p className="text-[10px] text-gray-400">Reply-to address for invoice emails</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <Button type="submit" disabled={saving}>
                     {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />} Save Business Details
                   </Button>
