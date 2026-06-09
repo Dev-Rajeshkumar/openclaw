@@ -2,14 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { FileText, IndianRupee, Clock, CheckCircle, AlertCircle, Loader2, Receipt } from 'lucide-react';
+import { FileText, IndianRupee, Clock, CheckCircle, AlertCircle, Loader2, Receipt, CreditCard } from 'lucide-react';
 import { IInvoice } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+interface PortalInvoice extends IInvoice {
+  razorpayEnabled?: boolean;
+}
+
 export default function ClientInvoicesPage() {
-  const [invoices, setInvoices] = useState<IInvoice[]>([]);
+  const [invoices, setInvoices] = useState<PortalInvoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchInvoices = useCallback(async () => {
@@ -20,7 +24,7 @@ export default function ClientInvoicesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
-      if (json.success && json.data) setInvoices(json.data as IInvoice[]);
+      if (json.success && json.data) setInvoices(json.data as PortalInvoice[]);
     } catch (e) {
       console.error(e);
     } finally {
@@ -37,6 +41,9 @@ export default function ClientInvoicesPage() {
   const totalPaid = invoices
     .filter((i) => i.status === 'Paid')
     .reduce((sum, i) => sum + i.total, 0);
+
+  const canPay = (inv: PortalInvoice) =>
+    inv.status !== 'Paid' && inv.status !== 'Cancelled' && inv.razorpayEnabled;
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
@@ -68,12 +75,14 @@ export default function ClientInvoicesPage() {
         ) : invoices.length > 0 ? (
           <div className="divide-y divide-gray-50">
             {invoices.map((inv) => (
-              <Link
+              <div
                 key={inv.id}
-                href={`/portal/invoices/${inv.id}`}
                 className="flex items-center justify-between p-4 hover:bg-gray-50 transition"
               >
-                <div className="flex items-center gap-3">
+                <Link
+                  href={`/portal/invoices/${inv.id}`}
+                  className="flex items-center gap-3 flex-1 min-w-0"
+                >
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                     inv.status === 'Paid' ? 'bg-green-50' :
                     inv.status === 'Overdue' ? 'bg-red-50' :
@@ -87,17 +96,28 @@ export default function ClientInvoicesPage() {
                     <p className="font-medium text-gray-900 text-sm">{inv.invoiceNumber}</p>
                     <p className="text-xs text-gray-500">{formatDate(inv.invoiceDate)}</p>
                   </div>
+                </Link>
+                <div className="flex items-center gap-3 shrink-0 ml-4">
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900 text-sm">{formatCurrency(inv.total)}</p>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                      inv.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                      inv.status === 'Overdue' ? 'bg-red-100 text-red-700' :
+                      inv.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>{inv.status}</span>
+                  </div>
+                  {canPay(inv) && (
+                    <Link
+                      href={`/portal/invoices/${inv.id}`}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition"
+                    >
+                      <CreditCard size={12} />
+                      Pay
+                    </Link>
+                  )}
                 </div>
-                <div className="text-right shrink-0 ml-4">
-                  <p className="font-semibold text-gray-900 text-sm">{formatCurrency(inv.total)}</p>
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                    inv.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                    inv.status === 'Overdue' ? 'bg-red-100 text-red-700' :
-                    inv.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>{inv.status}</span>
-                </div>
-              </Link>
+              </div>
             ))}
           </div>
         ) : (

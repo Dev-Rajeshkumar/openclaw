@@ -2,18 +2,28 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Download, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Loader2, CreditCard, CheckCircle, AlertCircle } from 'lucide-react';
 import { IInvoice } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+interface PortalInvoice extends IInvoice {
+  razorpayEnabled?: boolean;
+  razorpayKeyId?: string;
+  businessName?: string;
+  clientName?: string;
+  clientEmail?: string;
+}
+
 export default function ClientInvoiceDetail() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const [invoice, setInvoice] = useState<IInvoice | null>(null);
+  const [invoice, setInvoice] = useState<PortalInvoice | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fetchInvoice = useCallback(async () => {
     const token = localStorage.getItem('client_token');
@@ -23,7 +33,7 @@ export default function ClientInvoiceDetail() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
-      if (json.success && json.data) setInvoice(json.data as IInvoice);
+      if (json.success && json.data) setInvoice(json.data as PortalInvoice);
     } catch (e) {
       console.error(e);
     } finally {
@@ -33,12 +43,118 @@ export default function ClientInvoiceDetail() {
 
   useEffect(() => { fetchInvoice(); }, [fetchInvoice]);
 
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   const handleDownloadPDF = () => {
-    const publicToken = (invoice as any)?.publicAccessToken;
+    const publicToken = invoice?.publicAccessToken;
     if (publicToken) {
       window.open(`${API_URL}/v1/public/invoices/${publicToken}/pdf`, '_blank');
     }
   };
+
+  const loadRazorpayScript = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if ((window as any).Razorpay) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load Razorpay SDK'));
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePayNow = async () => {
+    if (!invoice?.publicAccessToken) return;
+    setPaying(true);
+    try {
+      // Step 1: Create Razorpay order
+      const orderRes = await fetch(
+        `${API_URL}/v1/public/payments/invoice/${invoice.publicAccessToken}/create-order`,
+        { method: 'POST' }
+      );
+      const orderJson = await orderRes.json();
+      if (!orderJson.success || !orderJson.data) {
+        throw new Error(orderJson.message || 'Failed to create payment order');
+      }
+
+      const { orderId, amount, currency, key } = orderJson.data;
+
+      // Step 2: Load Razorpay SDK
+      await loadRazorpayScript();
+
+      // Step 3: Open Razorpay checkout
+      const businessName = invoice.businessName || 'BillingBee';
+      const options = {
+        key: key,
+        amount: amount,
+        currency: currency,
+        name: businessName,
+        description: `Payment for ${invoice.invoiceNumber}`,
+        order_id: orderId,
+        handler: async function (response: any) {
+          try {
+            // Step 4: Verify payment
+            const verifyRes = await fetch(
+              `${API_URL}/v1/public/payments/invoice/${invoice.publicAccessToken}/verify`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              }
+            );
+            const verifyJson = await verifyRes.json();
+            if (verifyJson.success) {
+              setToast({ type: 'success', message: 'Payment successful! Thank you.' });
+              await fetchInvoice();
+            } else {
+              setToast({ type: 'error', message: verifyJson.message || 'Payment verification failed' });
+            }
+          } catch (e: any) {
+            setToast({ type: 'error', message: 'Payment verification failed. Please contact support.' });
+          }
+        },
+        prefill: {
+          name: invoice.clientName || '',
+          email: invoice.clientEmail || '',
+        },
+        theme: {
+          color: '#f59e0b',
+        },
+        modal: {
+          ondismiss: function () {
+            setPaying(false);
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        setToast({ type: 'error', message: response.error?.description || 'Payment failed. Please try again.' });
+        setPaying(false);
+      });
+      rzp.open();
+    } catch (e: any) {
+      setToast({ type: 'error', message: e.message || 'Something went wrong. Please try again.' });
+      setPaying(false);
+    }
+  };
+
+  const canPay = invoice &&
+    invoice.status !== 'Paid' &&
+    invoice.status !== 'Cancelled' &&
+    invoice.razorpayEnabled;
 
   if (loading) {
     return (
@@ -71,6 +187,16 @@ export default function ClientInvoiceDetail() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
+          toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+          {toast.message}
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="flex items-center justify-between mb-6">
         <button onClick={() => router.push('/portal/invoices')} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
@@ -144,6 +270,38 @@ export default function ClientInvoiceDetail() {
               </div>
             </div>
           </div>
+
+          {/* Pay Now section */}
+          {canPay && (
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <button
+                onClick={handlePayNow}
+                disabled={paying}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl text-base font-semibold hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition shadow-sm"
+              >
+                {paying ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={18} />
+                    Pay Now — {formatCurrency(invoice.total)}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {!canPay && invoice.status !== 'Paid' && invoice.status !== 'Cancelled' && (
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg text-sm text-gray-500">
+                <AlertCircle size={16} />
+                Online payment is not available for this invoice. Please contact the business owner.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Notes */}
