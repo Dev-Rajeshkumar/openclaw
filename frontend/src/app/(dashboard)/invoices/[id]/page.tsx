@@ -254,7 +254,7 @@ export default function InvoiceDetailPage() {
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" /></div>;
-  if (!invoice) return <div className="text-center py-12"><p className="text-gray-500">Invoice not found</p></div>;
+  if (!invoice) return <div className="text-center py-12"><p className="text-gray-500 dark:text-gray-400">Invoice not found</p></div>;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -262,10 +262,10 @@ export default function InvoiceDetailPage() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.back()}><ArrowLeft size={20} /></Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{invoice.invoiceNumber}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{invoice.invoiceNumber}</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>{invoice.status}</span>
-              <span className="text-sm text-gray-500">{formatDate(invoice.invoiceDate)}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{formatDate(invoice.invoiceDate)}</span>
             </div>
           </div>
         </div>
@@ -290,7 +290,7 @@ export default function InvoiceDetailPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               <Palette size={16} />
               <span className="font-medium">PDF Template:</span>
             </div>
@@ -315,12 +315,12 @@ export default function InvoiceDetailPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                 <Link size={16} />
                 <span className="font-medium">Public Link:</span>
               </div>
               <div className="flex-1 flex items-center gap-2">
-                <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 truncate flex-1">
+                <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300 truncate flex-1">
                   {typeof window !== 'undefined' ? window.location.origin : ''}/i/{(invoice as any).publicAccessToken}
                 </code>
                 <button
@@ -329,14 +329,14 @@ export default function InvoiceDetailPage() {
                     navigator.clipboard.writeText(url);
                     toast.success('Link copied!');
                   }}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition shrink-0"
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition shrink-0"
                   title="Copy link"
                 >
-                  <Copy size={14} className="text-gray-400" />
+                  <Copy size={14} className="text-gray-400 dark:text-gray-500" />
                 </button>
               </div>
               {(invoice as any)?.viewCount > 0 && (
-                <span className="text-xs text-gray-400 flex items-center gap-1 shrink-0">
+                <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 shrink-0">
                   <Eye size={12} /> {(invoice as any).viewCount} views
                 </span>
               )}
@@ -349,18 +349,18 @@ export default function InvoiceDetailPage() {
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Bill To</h3>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Bill To</h3>
               {invoice.client ? (<>
-                <p className="font-semibold text-gray-900">{invoice.client.name}</p>
-                {invoice.client.email && <p className="text-sm text-gray-500">{invoice.client.email}</p>}
-                {invoice.client.phone && <p className="text-sm text-gray-500">{invoice.client.phone}</p>}
-                {invoice.client.gstNumber && <p className="text-sm text-gray-500">GST: {invoice.client.gstNumber}</p>}
-              </>) : <p className="text-gray-400">No client assigned</p>}
+                <p className="font-semibold text-gray-900 dark:text-white">{invoice.client.name}</p>
+                {invoice.client.email && <p className="text-sm text-gray-500 dark:text-gray-400">{invoice.client.email}</p>}
+                {invoice.client.phone && <p className="text-sm text-gray-500 dark:text-gray-400">{invoice.client.phone}</p>}
+                {invoice.client.gstNumber && <p className="text-sm text-gray-500 dark:text-gray-400">GST: {invoice.client.gstNumber}</p>}
+              </>) : <p className="text-gray-400 dark:text-gray-500">No client assigned</p>}
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div><p className="text-sm text-gray-500">Number</p><p className="font-semibold text-gray-900">{invoice.invoiceNumber}</p></div>
-              <div><p className="text-sm text-gray-500">Date</p><p className="font-semibold text-gray-900">{formatDate(invoice.invoiceDate)}</p></div>
-              <div><p className="text-sm text-gray-500">Due</p><p className="font-semibold text-gray-900">{invoice.dueDate ? formatDate(invoice.dueDate) : '—'}</p></div>
+              <div><p className="text-sm text-gray-500 dark:text-gray-400">Number</p><p className="font-semibold text-gray-900 dark:text-white">{invoice.invoiceNumber}</p></div>
+              <div><p className="text-sm text-gray-500 dark:text-gray-400">Date</p><p className="font-semibold text-gray-900 dark:text-white">{formatDate(invoice.invoiceDate)}</p></div>
+              <div><p className="text-sm text-gray-500 dark:text-gray-400">Due</p><p className="font-semibold text-gray-900 dark:text-white">{invoice.dueDate ? formatDate(invoice.dueDate) : '—'}</p></div>
             </div>
           </div>
 
@@ -371,7 +371,7 @@ export default function InvoiceDetailPage() {
                 {invoice.items.map((item, i) => (
                   <TableRow key={item.id || i}>
                     <TableCell>{item.description}</TableCell>
-                    <TableCell className="text-gray-500 text-sm">{item.hsnCode}</TableCell>
+                    <TableCell className="text-gray-500 dark:text-gray-400 text-sm">{item.hsnCode}</TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.rate)}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(item.amount)}</TableCell>
@@ -383,13 +383,13 @@ export default function InvoiceDetailPage() {
 
           <div className="flex justify-end mt-6">
             <div className="w-full sm:w-64 space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(invoice.subtotal)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-500">GST</span><span>{formatCurrency(invoice.taxAmount)}</span></div>
-              <div className="flex justify-between font-bold border-t pt-2"><span>Total</span><span className="text-amber-600">{formatCurrency(invoice.total)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Subtotal</span><span>{formatCurrency(invoice.subtotal)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">GST</span><span>{formatCurrency(invoice.taxAmount)}</span></div>
+              <div className="flex justify-between font-bold border-t border-gray-200 dark:border-gray-700 pt-2"><span>Total</span><span className="text-amber-600 dark:text-amber-400">{formatCurrency(invoice.total)}</span></div>
             </div>
           </div>
 
-          {invoice.notes && (<div className="mt-6 p-4 bg-gray-50 rounded-lg"><p className="text-sm font-medium text-gray-500 mb-1">Notes</p><p className="text-sm text-gray-700">{invoice.notes}</p></div>)}
+          {invoice.notes && (<div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"><p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Notes</p><p className="text-sm text-gray-700 dark:text-gray-300">{invoice.notes}</p></div>)}
         </CardContent>
       </Card>
 
@@ -500,23 +500,23 @@ export default function InvoiceDetailPage() {
                 {[...invoice.statusLogs].reverse().map((log, i) => (
                   <div key={log.id} className="flex gap-4">
                     <div className="flex flex-col items-center">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${log.action === 'CREATE' ? 'bg-green-100 text-green-600' : log.action === 'DELETE' ? 'bg-red-100 text-red-600' : log.action === 'STATUS_CHANGE' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${log.action === 'CREATE' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : log.action === 'DELETE' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : log.action === 'STATUS_CHANGE' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'}`}>
                         {log.action === 'CREATE' ? <FileText size={14} /> : <Clock size={14} />}
                       </div>
-                      {i < invoice.statusLogs!.length - 1 && <div className="w-px h-full bg-gray-200 mt-1" />}
+                      {i < invoice.statusLogs!.length - 1 && <div className="w-px h-full bg-gray-200 dark:bg-gray-700 mt-1" />}
                     </div>
                     <div className="pb-4">
-                      <p className="text-sm font-medium text-gray-900">{log.description}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{log.description}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{log.action}</span>
-                        <span className="text-xs text-gray-400">{formatDateTime(log.createdAt)}</span>
+                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{log.action}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">{formatDateTime(log.createdAt)}</span>
                       </div>
-                      {log.oldValue && log.newValue && <p className="text-xs text-gray-400 mt-1">{log.oldValue} → {log.newValue}</p>}
+                      {log.oldValue && log.newValue && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{log.oldValue} → {log.newValue}</p>}
                     </div>
                   </div>
                 ))}
               </div>
-            ) : <p className="text-gray-400 text-sm">No status history yet</p>}
+            ) : <p className="text-gray-400 dark:text-gray-500 text-sm">No status history yet</p>}
           </CardContent>
         </Card>
       )}
@@ -544,20 +544,20 @@ export default function InvoiceDetailPage() {
             </DialogDescription>
           </DialogHeader>
           {followUpDays === 0 && (
-            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
               This invoice is not yet overdue, but you can still use these messages as payment reminders.
             </p>
           )}
           <div className="space-y-3 mt-2">
             {followUpMessages.map((msg, i) => (
-              <div key={i} className="group relative bg-gray-50 border border-gray-200 rounded-lg p-4 hover:border-amber-300 transition-colors">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap pr-8">{msg}</p>
+              <div key={i} className="group relative bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-amber-300 dark:hover:border-amber-600 transition-colors">
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap pr-8">{msg}</p>
                 <button
                   onClick={() => { navigator.clipboard.writeText(msg); toast.success('Message copied!'); }}
-                  className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-200 transition-all"
+                  className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
                   title="Copy message"
                 >
-                  <Copy size={14} className="text-gray-500" />
+                  <Copy size={14} className="text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
             ))}

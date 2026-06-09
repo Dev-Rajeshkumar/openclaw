@@ -39,21 +39,21 @@ export default function PaymentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h1 className="text-2xl font-bold text-gray-900">Payments</h1><p className="text-gray-500">Track all payment transactions</p></div>
+        <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Payments</h1><p className="text-gray-500 dark:text-gray-400">Track all payment transactions</p></div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card><CardContent className="p-4">
-          <p className="text-xs text-gray-400 mb-1">Total Received</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReceived)}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Total Received</p>
+          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalReceived)}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
-          <p className="text-xs text-gray-400 mb-1">This Month</p>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(payments.filter(p => new Date(p.createdAt).getMonth() === new Date().getMonth()).reduce((s, p) => s + p.amount, 0))}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">This Month</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(payments.filter(p => new Date(p.createdAt).getMonth() === new Date().getMonth()).reduce((s, p) => s + p.amount, 0))}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
-          <p className="text-xs text-gray-400 mb-1">Transactions</p>
-          <p className="text-2xl font-bold text-gray-900">{payments.length}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Transactions</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{payments.length}</p>
         </CardContent></Card>
       </div>
 
@@ -81,18 +81,18 @@ export default function PaymentsPage() {
                     {payments.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{p.invoice?.invoiceNumber || '—'}</TableCell>
-                        <TableCell className="font-semibold text-green-600">{formatCurrency(p.amount)}</TableCell>
-                        <TableCell><span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{p.method}</span></TableCell>
-                        <TableCell className="text-gray-500 text-sm">{p.reference || '—'}</TableCell>
+                        <TableCell className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(p.amount)}</TableCell>
+                        <TableCell><span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{p.method}</span></TableCell>
+                        <TableCell className="text-gray-500 dark:text-gray-400 text-sm">{p.reference || '—'}</TableCell>
                         <TableCell><span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(p.status)}`}>{p.status}</span></TableCell>
-                        <TableCell className="text-gray-500 text-sm">{formatDate(p.createdAt)}</TableCell>
+                        <TableCell className="text-gray-500 dark:text-gray-400 text-sm">{formatDate(p.createdAt)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4">
-                    <p className="text-sm text-gray-500">Page {page} of {totalPages}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Page {page} of {totalPages}</p>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button>
                       <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
@@ -102,8 +102,8 @@ export default function PaymentsPage() {
               </>
             ) : (
               <div className="py-12 text-center">
-                <CreditCard size={40} className="text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No payments recorded yet. Record a payment from an invoice detail page.</p>
+                <CreditCard size={40} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400">No payments recorded yet. Record a payment from an invoice detail page.</p>
               </div>
             )}
         </CardContent>

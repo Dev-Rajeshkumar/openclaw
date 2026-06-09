@@ -126,7 +126,7 @@ export default function NewInvoicePage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}><ArrowLeft size={20} /></Button>
-        <div><h1 className="text-2xl font-bold text-gray-900">New Invoice</h1><p className="text-gray-500">Create a GST-compliant invoice</p></div>
+        <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">New Invoice</h1><p className="text-gray-500 dark:text-gray-400">Create a GST-compliant invoice</p></div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -212,7 +212,7 @@ export default function NewInvoicePage() {
                       <TableCell><Input placeholder="HSN" {...register(`items.${index}.hsnCode`)} className="h-9" /></TableCell>
                       <TableCell><Input type="number" min="0" step="0.01" {...register(`items.${index}.quantity`, { valueAsNumber: true })} className="h-9" /></TableCell>
                       <TableCell><Input type="number" min="0" step="0.01" {...register(`items.${index}.rate`, { valueAsNumber: true })} className="h-9" /></TableCell>
-                      <TableCell><Input value={formatCurrency((watchedItems[index]?.quantity || 0) * (watchedItems[index]?.rate || 0))} readOnly className="h-9 bg-gray-50" /></TableCell>
+                      <TableCell><Input value={formatCurrency((watchedItems[index]?.quantity || 0) * (watchedItems[index]?.rate || 0))} readOnly className="h-9 bg-gray-50 dark:bg-gray-700" /></TableCell>
                       <TableCell>{fields.length > 1 && <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="h-8 w-8 text-red-500"><Trash2 size={14} /></Button>}</TableCell>
                     </TableRow>
                   ))}
@@ -220,9 +220,9 @@ export default function NewInvoicePage() {
               </Table>
             </div>
             <div className="flex justify-end mt-4"><div className="w-64 space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({watchedGstRate}%)</span><span>{formatCurrency(gstAmount)}</span></div>
-              <div className="flex justify-between font-bold border-t pt-2"><span>Total</span><span className="text-amber-600">{formatCurrency(total)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">GST ({watchedGstRate}%)</span><span>{formatCurrency(gstAmount)}</span></div>
+              <div className="flex justify-between font-bold border-t border-gray-200 dark:border-gray-700 pt-2"><span>Total</span><span className="text-amber-600 dark:text-amber-400">{formatCurrency(total)}</span></div>
             </div></div>
           </CardContent>
         </Card>

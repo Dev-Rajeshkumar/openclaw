@@ -37,7 +37,7 @@ export default function ClientsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h1 className="text-2xl font-bold text-gray-900">Clients</h1><p className="text-gray-500">Manage your client list</p></div>
+        <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clients</h1><p className="text-gray-500 dark:text-gray-400">Manage your client list</p></div>
         <Button asChild><a href="/dashboard/clients/new"><Plus size={18} className="mr-2" /> Add Client</a></Button>
       </div>
       <Card><CardContent className="p-4">
@@ -50,7 +50,7 @@ export default function ClientsPage() {
               <Card key={client.id} className="hover:shadow-md transition">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center"><Users size={18} className="text-amber-600" /></div>
+                    <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center"><Users size={18} className="text-amber-600 dark:text-amber-400" /></div>
                     <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal size={16} /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild><a href={`/dashboard/clients/${client.id}`} className="flex items-center gap-2"><Eye size={14} /> View</a></DropdownMenuItem>
@@ -58,21 +58,21 @@ export default function ClientsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-1">{client.name}</h3>
-                  {client.email && <p className="text-sm text-gray-500">{client.email}</p>}
-                  {client.phone && <p className="text-sm text-gray-500">{client.phone}</p>}
-                  {client.gstNumber && <p className="text-xs text-gray-400 mt-2">GST: {client.gstNumber}</p>}
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{client.name}</h3>
+                  {client.email && <p className="text-sm text-gray-500 dark:text-gray-400">{client.email}</p>}
+                  {client.phone && <p className="text-sm text-gray-500 dark:text-gray-400">{client.phone}</p>}
+                  {client.gstNumber && <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">GST: {client.gstNumber}</p>}
                 </CardContent>
               </Card>
             ))}
           </div>
           {totalPages > 1 && (
-            <div className="flex items-center justify-between"><p className="text-sm text-gray-500">Page {page} of {totalPages}</p>
+            <div className="flex items-center justify-between"><p className="text-sm text-gray-500 dark:text-gray-400">Page {page} of {totalPages}</p>
               <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button><Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button></div>
             </div>
           )}
         </>) : (
-          <div className="py-12 text-center"><Users size={40} className="text-gray-300 mx-auto mb-3" /><p className="text-gray-500 mb-4">No clients yet</p><Button asChild><a href="/dashboard/clients/new"><Plus size={18} className="mr-2" /> Add Your First Client</a></Button></div>
+          <div className="py-12 text-center"><Users size={40} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" /><p className="text-gray-500 dark:text-gray-400 mb-4">No clients yet</p><Button asChild><a href="/dashboard/clients/new"><Plus size={18} className="mr-2" /> Add Your First Client</a></Button></div>
         )}
     </div>
   );

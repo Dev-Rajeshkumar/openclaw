@@ -54,8 +54,8 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="text-gray-500">Business performance overview</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports</h1>
+          <p className="text-gray-500 dark:text-gray-400">Business performance overview</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={period} onValueChange={setPeriod}>
@@ -82,37 +82,37 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="p-4 md:p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-1.5 md:p-2 rounded-lg bg-green-50"><TrendingUp size={16} className="text-green-600" /></div>
+                  <div className="p-1.5 md:p-2 rounded-lg bg-green-50 dark:bg-green-900/30"><TrendingUp size={16} className="text-green-600 dark:text-green-400" /></div>
                 </div>
-                <p className="text-lg md:text-2xl font-bold text-gray-900">{formatCurrency(data.revenue.total)}</p>
-                <p className="text-xs md:text-sm text-gray-500 mt-1">Total Revenue</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(data.revenue.total)}</p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Total Revenue</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 md:p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-1.5 md:p-2 rounded-lg bg-red-50"><IndianRupee size={16} className="text-red-600" /></div>
+                  <div className="p-1.5 md:p-2 rounded-lg bg-red-50 dark:bg-red-900/30"><IndianRupee size={16} className="text-red-600 dark:text-red-400" /></div>
                 </div>
-                <p className="text-lg md:text-2xl font-bold text-gray-900">{formatCurrency(data.expenses.total)}</p>
-                <p className="text-xs md:text-sm text-gray-500 mt-1">Total Expenses</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(data.expenses.total)}</p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Total Expenses</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 md:p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-1.5 md:p-2 rounded-lg bg-blue-50"><BarChart3 size={16} className="text-blue-600" /></div>
+                  <div className="p-1.5 md:p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30"><BarChart3 size={16} className="text-blue-600 dark:text-blue-400" /></div>
                 </div>
-                <p className={`text-lg md:text-2xl font-bold ${data.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(data.profit)}</p>
-                <p className="text-xs md:text-sm text-gray-500 mt-1">Net Profit</p>
+                <p className={`text-lg md:text-2xl font-bold ${data.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(data.profit)}</p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Net Profit</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 md:p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-1.5 md:p-2 rounded-lg bg-purple-50"><FileText size={16} className="text-purple-600" /></div>
+                  <div className="p-1.5 md:p-2 rounded-lg bg-purple-50 dark:bg-purple-900/30"><FileText size={16} className="text-purple-600 dark:text-purple-400" /></div>
                 </div>
-                <p className="text-lg md:text-2xl font-bold text-gray-900">{data.invoiceBreakdown.reduce((s, b) => s + b.count, 0)}</p>
-                <p className="text-xs md:text-sm text-gray-500 mt-1">Total Invoices</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">{data.invoiceBreakdown.reduce((s, b) => s + b.count, 0)}</p>
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Total Invoices</p>
               </CardContent>
             </Card>
           </div>
@@ -125,15 +125,15 @@ export default function ReportsPage() {
                   <div className="space-y-3">
                     {data.revenue.monthly.map((m) => (
                       <div key={m.month} className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500 w-12 shrink-0">{m.month}</span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 w-12 shrink-0">{m.month}</span>
+                        <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-6 relative overflow-hidden">
                           <div className="absolute inset-y-0 left-0 bg-amber-400 rounded-full transition-all" style={{ width: `${Math.min(100, data.revenue.total > 0 ? (m.amount / data.revenue.total) * 100 * (data.revenue.monthly.length))}%` }} />
-                          <span className="absolute inset-0 flex items-center px-2 text-xs font-medium text-gray-700">{formatCurrency(m.amount)}</span>
+                          <span className="absolute inset-0 flex items-center px-2 text-xs font-medium text-gray-700 dark:text-gray-300">{formatCurrency(m.amount)}</span>
                         </div>
                       </div>
                     ))}
                   </div>
-                ) : <p className="text-gray-400 text-sm py-4 text-center">No revenue data</p>}
+                ) : <p className="text-gray-400 dark:text-gray-500 text-sm py-4 text-center">No revenue data</p>}
               </CardContent>
             </Card>
 
@@ -144,15 +144,15 @@ export default function ReportsPage() {
                   <div className="space-y-3">
                     {data.expenses.byCategory.map((c) => (
                       <div key={c.category} className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500 w-24 shrink-0 truncate">{c.category}</span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0 truncate">{c.category}</span>
+                        <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-6 relative overflow-hidden">
                           <div className="absolute inset-y-0 left-0 bg-red-400 rounded-full transition-all" style={{ width: `${Math.min(100, data.expenses.total > 0 ? (c.amount / data.expenses.total) * 100 : 0)}%` }} />
-                          <span className="absolute inset-0 flex items-center px-2 text-xs font-medium text-gray-700">{formatCurrency(c.amount)}</span>
+                          <span className="absolute inset-0 flex items-center px-2 text-xs font-medium text-gray-700 dark:text-gray-300">{formatCurrency(c.amount)}</span>
                         </div>
                       </div>
                     ))}
                   </div>
-                ) : <p className="text-gray-400 text-sm py-4 text-center">No expense data</p>}
+                ) : <p className="text-gray-400 dark:text-gray-500 text-sm py-4 text-center">No expense data</p>}
               </CardContent>
             </Card>
           </div>
@@ -190,10 +190,10 @@ export default function ReportsPage() {
                   { type: 'payments', label: 'Payments', desc: 'Payment history with references' },
                   { type: 'expenses', label: 'Expenses', desc: 'Expense records with categories' },
                 ].map((item) => (
-                  <div key={item.type} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition">
+                  <div key={item.type} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                     <div className="min-w-0 mr-3">
-                      <p className="font-medium text-sm text-gray-900">{item.label}</p>
-                      <p className="text-xs text-gray-400 truncate">{item.desc}</p>
+                      <p className="font-medium text-sm text-gray-900 dark:text-white">{item.label}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{item.desc}</p>
                     </div>
                     <Button size="sm" variant="outline" onClick={() => exportCSV(item.type)} className="shrink-0">
                       <Download size={14} />
@@ -207,8 +207,8 @@ export default function ReportsPage() {
       ) : (
         <Card>
           <CardContent className="py-12 text-center">
-            <BarChart3 size={40} className="text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">Select a period to view reports</p>
+            <BarChart3 size={40} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-500 dark:text-gray-400">Select a period to view reports</p>
           </CardContent>
         </Card>
       )}

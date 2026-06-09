@@ -109,23 +109,18 @@ export default function SubscriptionPage() {
     if (!activeBusiness) return;
     setLoading(true);
     try {
-      // Fetch subscription
       try {
         const { data: subRes } = await api.get('/v1/subscriptions');
         if (subRes.success && subRes.data) {
           setSubscription(subRes.data as ISubscription);
         }
-      } catch {
-        // No subscription yet — that's fine
-      }
+      } catch { /* No subscription yet */ }
 
-      // Fetch invoices for usage count and billing history
       try {
         const { data: invRes } = await api.get('/invoices?limit=5&page=1');
         if (invRes.success && invRes.data) {
           const invoices = invRes.data as IInvoice[];
           setRecentInvoices(invoices);
-          // Count this month's invoices
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
           const thisMonth = invoices.filter((inv) => new Date(inv.createdAt) >= startOfMonth).length;
@@ -133,7 +128,6 @@ export default function SubscriptionPage() {
         }
       } catch { /* ignore */ }
 
-      // Fetch clients count
       try {
         const { data: cliRes } = await api.get('/clients?limit=1&page=1');
         if (cliRes.success && cliRes.meta) {
@@ -141,7 +135,6 @@ export default function SubscriptionPage() {
         }
       } catch { /* ignore */ }
 
-      // Businesses count from auth
       try {
         const { data: bizRes } = await api.get('/businesses');
         if (bizRes.success && bizRes.data) {
@@ -156,11 +149,8 @@ export default function SubscriptionPage() {
     }
   }, [activeBusiness]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ─── Actions ──────────────────────────────────────────
   const handleUpgrade = async (plan: SubscriptionPlan) => {
     if (!activeBusiness) return;
     setActionLoading(plan);
@@ -209,7 +199,6 @@ export default function SubscriptionPage() {
   const isCancelled = subscription?.status === 'cancelled';
   const isActive = subscription?.status === 'active' || (!subscription && currentPlanName === SubscriptionPlan.Free);
 
-  // ─── Usage bar component ──────────────────────────────
   function UsageBar({ label, current, max, icon: Icon }: { label: string; current: number; max: number; icon: React.ElementType }) {
     const pct = Math.min((current / max) * 100, 100);
     const isNearLimit = pct >= 80;
@@ -217,15 +206,15 @@ export default function SubscriptionPage() {
     return (
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-2 text-gray-600">
-            <Icon size={15} className="text-gray-400" />
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+            <Icon size={15} className="text-gray-400 dark:text-gray-500" />
             <span>{label}</span>
           </div>
-          <span className={`font-medium ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-amber-600' : 'text-gray-900'}`}>
+          <span className={`font-medium ${isAtLimit ? 'text-red-600 dark:text-red-400' : isNearLimit ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'}`}>
             {current} / {max === Infinity ? '∞' : max}
           </span>
         </div>
-        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
               isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-amber-500' : 'bg-amber-400'
@@ -251,17 +240,16 @@ export default function SubscriptionPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Crown className="text-amber-500" size={24} />
           Subscription
         </h1>
-        <p className="text-gray-500 mt-1">Manage your plan, usage, and billing</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your plan, usage, and billing</p>
       </div>
 
       {/* ─── Current Plan + Usage ─────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Current Plan Card */}
-        <Card className={isCancelled ? 'border-red-200' : 'border-amber-200'}>
+        <Card className={isCancelled ? 'border-red-200 dark:border-red-800' : 'border-amber-200 dark:border-amber-800'}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -278,12 +266,12 @@ export default function SubscriptionPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <div className="text-3xl font-bold text-gray-900">
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">
                 ₹{currentPlanDef.price}
-                <span className="text-base font-normal text-gray-400">/mo</span>
+                <span className="text-base font-normal text-gray-400 dark:text-gray-500">/mo</span>
               </div>
               {subscription?.currentPeriodEnd && (
-                <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
                   <Calendar size={14} />
                   {isCancelled
                     ? `Access until ${new Date(subscription.currentPeriodEnd).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}`
@@ -296,10 +284,10 @@ export default function SubscriptionPage() {
             <Separator />
 
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Included features</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Included features</p>
               <ul className="space-y-1.5">
                 {currentPlanDef.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
+                  <li key={f} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                     <Check size={14} className="text-green-500 shrink-0" />
                     {f}
                   </li>
@@ -314,7 +302,7 @@ export default function SubscriptionPage() {
                   Renew Subscription
                 </Button>
               ) : (
-                <Button variant="outline" onClick={() => setShowCancelConfirm(true)} disabled={actionLoading !== null} className="text-red-600 border-red-200 hover:bg-red-50">
+                <Button variant="outline" onClick={() => setShowCancelConfirm(true)} disabled={actionLoading !== null} className="text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20">
                   Cancel Plan
                 </Button>
               )}
@@ -322,7 +310,6 @@ export default function SubscriptionPage() {
           </CardContent>
         </Card>
 
-        {/* Usage Stats Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -359,7 +346,7 @@ export default function SubscriptionPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCancelConfirm(false)}>
           <Card className="max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-600">
+              <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
                 <AlertTriangle size={20} />
                 Cancel Subscription?
               </CardTitle>
@@ -382,7 +369,7 @@ export default function SubscriptionPage() {
 
       {/* ─── Plan Comparison ──────────────────────────────── */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Compare Plans</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Compare Plans</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PLANS.map((plan) => {
             const isCurrent = currentPlanName === plan.name;
@@ -393,9 +380,9 @@ export default function SubscriptionPage() {
                 key={plan.name}
                 className={`relative flex flex-col ${
                   isCurrent
-                    ? 'border-amber-400 shadow-lg shadow-amber-100 ring-1 ring-amber-200'
+                    ? 'border-amber-400 shadow-lg shadow-amber-100 dark:shadow-amber-900/20 ring-1 ring-amber-200 dark:ring-amber-800'
                     : plan.popular
-                    ? 'border-purple-200 shadow-md'
+                    ? 'border-purple-200 dark:border-purple-800 shadow-md'
                     : ''
                 }`}
               >
@@ -415,32 +402,32 @@ export default function SubscriptionPage() {
                   <CardTitle className="text-base">{plan.name}</CardTitle>
                   <div className="text-2xl font-bold">
                     ₹{plan.price}
-                    <span className="text-sm font-normal text-gray-400">/mo</span>
+                    <span className="text-sm font-normal text-gray-400 dark:text-gray-500">/mo</span>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 pb-3">
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Invoices</span>
+                      <span className="text-gray-500 dark:text-gray-400">Invoices</span>
                       <span className="font-medium">{plan.invoices}/mo</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Clients</span>
+                      <span className="text-gray-500 dark:text-gray-400">Clients</span>
                       <span className="font-medium">{plan.clients}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Templates</span>
+                      <span className="text-gray-500 dark:text-gray-400">Templates</span>
                       <span className="font-medium">{plan.templates}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Businesses</span>
+                      <span className="text-gray-500 dark:text-gray-400">Businesses</span>
                       <span className="font-medium">{plan.businesses}</span>
                     </div>
                   </div>
                   <Separator className="my-3" />
                   <ul className="space-y-1.5">
                     {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-1.5 text-xs text-gray-600">
+                      <li key={f} className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-300">
                         <Check size={12} className="text-green-500 shrink-0 mt-0.5" />
                         {f}
                       </li>
@@ -484,10 +471,10 @@ export default function SubscriptionPage() {
         <CardContent className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-2 font-medium text-gray-500">Feature</th>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="text-left py-3 px-2 font-medium text-gray-500 dark:text-gray-400">Feature</th>
                 {PLANS.map((p) => (
-                  <th key={p.name} className="text-center py-3 px-2 font-medium text-gray-900">{p.name}</th>
+                  <th key={p.name} className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white">{p.name}</th>
                 ))}
               </tr>
             </thead>
@@ -509,18 +496,18 @@ export default function SubscriptionPage() {
                 { feature: 'Custom integrations', values: [false, false, false, true] },
                 { feature: 'Dedicated support', values: [false, false, false, true] },
               ].map((row) => (
-                <tr key={row.feature} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="py-2.5 px-2 text-gray-700">{row.feature}</td>
+                <tr key={row.feature} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <td className="py-2.5 px-2 text-gray-700 dark:text-gray-300">{row.feature}</td>
                   {row.values.map((val, i) => (
                     <td key={i} className="text-center py-2.5 px-2">
                       {typeof val === 'boolean' ? (
                         val ? (
                           <Check size={16} className="text-green-500 mx-auto" />
                         ) : (
-                          <X size={16} className="text-gray-300 mx-auto" />
+                          <X size={16} className="text-gray-300 dark:text-gray-600 mx-auto" />
                         )
                       ) : (
-                        <span className="text-gray-900 font-medium">{val}</span>
+                        <span className="text-gray-900 dark:text-white font-medium">{val}</span>
                       )}
                     </td>
                   ))}
@@ -542,14 +529,14 @@ export default function SubscriptionPage() {
             <CardDescription>Your latest invoice activity</CardDescription>
           </div>
           <Link href="/dashboard/invoices">
-            <Button variant="ghost" size="sm" className="text-amber-600 hover:text-amber-700">
+            <Button variant="ghost" size="sm" className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
               View All <ChevronRight size={14} />
             </Button>
           </Link>
         </CardHeader>
         <CardContent>
           {recentInvoices.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-gray-400 dark:text-gray-500">
               <FileText size={32} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">No invoices yet</p>
             </div>
@@ -559,22 +546,22 @@ export default function SubscriptionPage() {
                 <Link
                   key={inv.id}
                   href={`/dashboard/invoices/${inv.id}`}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition border border-transparent hover:border-gray-100"
+                  className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition border border-transparent hover:border-gray-100 dark:hover:border-gray-700"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                      <FileText size={16} className="text-amber-600" />
+                    <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                      <FileText size={16} className="text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{inv.invoiceNumber}</p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{inv.invoiceNumber}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
                         {inv.client?.name || 'No client'} • {new Date(inv.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
                     </div>
                   </div>
                   <div className="text-right shrink-0 ml-3">
-                    <p className="text-sm font-semibold text-gray-900">₹{inv.total.toLocaleString('en-IN')}</p>
-                    <Badge className={`text-xs ${inv.status === 'Paid' ? 'bg-green-50 text-green-700' : inv.status === 'Overdue' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">₹{inv.total.toLocaleString('en-IN')}</p>
+                    <Badge className={`text-xs ${inv.status === 'Paid' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400' : inv.status === 'Overdue' ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
                       {inv.status}
                     </Badge>
                   </div>
