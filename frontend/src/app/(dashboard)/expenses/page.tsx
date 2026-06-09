@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Receipt, Trash2, MoreHorizontal } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Search, Receipt, Trash2, MoreHorizontal, Pencil } from 'lucide-react';
 import { IExpense } from '@/types';
 import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils';
 import api from '@/lib/api';
@@ -21,6 +22,7 @@ const EXPENSE_CATEGORIES = [
 ];
 
 export default function ExpensesPage() {
+  const router = useRouter();
   const [expenses, setExpenses] = useState<IExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -101,6 +103,7 @@ export default function ExpensesPage() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal size={16} /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/expenses/${exp.id}`)} className="flex items-center gap-2"><Pencil size={14} /> Edit</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDelete(exp.id)} className="text-red-600 flex items-center gap-2"><Trash2 size={14} /> Delete</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

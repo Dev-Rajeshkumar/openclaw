@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Search, Package, Trash2, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, Package, Trash2, MoreHorizontal, Pencil } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { IProduct } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import api from '@/lib/api';
@@ -13,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<IProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -118,6 +120,7 @@ export default function ProductsPage() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal size={16} /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.push(`/dashboard/products/${p.id}`)} className="flex items-center gap-2"><Pencil size={14} /> Edit</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDelete(p.id)} className="text-red-600 flex items-center gap-2"><Trash2 size={14} /> Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
