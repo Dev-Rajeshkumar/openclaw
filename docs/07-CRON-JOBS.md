@@ -1,14 +1,14 @@
 # Cron Jobs
 
 ## Overview
-BillingBee uses `setInterval` for scheduled tasks. Jobs run inside the main server process.
+BillingBee uses a MongoDB-locked scheduler (`backend/src/jobs/cronScheduler.ts`) for reliable job execution. Locks prevent duplicate runs when multiple server instances are deployed.
 
 ---
 
 ## Recurring Invoice Processor
 
 **File:** `backend/src/jobs/recurringInvoice.job.ts`
-**Schedule:** Every hour (3,600,000 ms)
+**Schedule:** Every hour
 **Startup delay:** 30 seconds after server start
 
 ### Logic
@@ -19,18 +19,12 @@ BillingBee uses `setInterval` for scheduled tasks. Jobs run inside the main serv
    - Create a new `Invoice` from the template data
    - Set invoice number using business prefix + nextInvoiceNo
    - Calculate totals from template items
-   - Update `nextRun` based on frequency:
-     - Daily: +1 day
-     - Weekly: +7 days
-     - Monthly: +1 month
-     - Quarterly: +3 months
-     - Yearly: +1 year
-   - If `endDate` is set and `nextRun > endDate`, deactivate the recurring invoice
+   - Update `nextRun` based on frequency
 3. If `autoSend` is true, send the invoice via email to the client
 
 ### Return Value
 ```ts
-{ processed: number }  // Number of invoices generated
+{ processed: number, errors: number }
 ```
 
 ---
@@ -38,22 +32,27 @@ BillingBee uses `setInterval` for scheduled tasks. Jobs run inside the main serv
 ## Email Reminder Job
 
 **File:** `backend/src/jobs/emailReminder.job.ts`
-**Schedule:** Every 24 hours (86,400,000 ms)
+**Schedule:** Every 24 hours
 **Startup delay:** 5 minutes after server start
 
-### Logic
-1. Find all invoices where:
-   - Status is `Sent` or `Overdue`
-   - `dueDate` is approaching (within 3 days) or past due
-   - No reminder sent in the last 7 days
-2. For each invoice:
-   - Check client's notification preferences
-   - Send reminder email with invoice details and payment link
-   - Respects `emailReminder` preference toggle
+### Escalation Sequences
+Each business can configure its own reminder schedule via `ReminderSchedule` model:
+- `daysBefore`: Days before due date to send first reminder (default: 3)
+- `onDueDate`: Whether to remind on the due date (default: true)
+- `daysAfter`: Array of overdue days to escalate (default: [3, 7, 14, 30])
+
+### Escalation Tones
+1. **Friendly** — Pre-due reminder
+2. **Gentle** — On due date
+3. **Firm** — First overdue reminder
+4. **Urgent** — Subsequent overdue reminders
+
+### Persistence
+Sent reminders are tracked in the database (via `Notification` model), surviving server restarts.
 
 ### Return Value
 ```ts
-{ sent: number }  // Number of reminders sent
+{ sent: number, skipped: number, errors: number }
 ```
 
 ---
@@ -65,8 +64,10 @@ BillingBee uses `setInterval` for scheduled tasks. Jobs run inside the main serv
 
 ### Events Handled
 - `payment.captured`: Records payment, marks invoice as Paid
-- `payment.failed`: Logs failure (future: notify user)
+- `payment.failed`: Logs failure
 
 ### Security
-- In production, verify `x-razorpay-signature` header
-- Currently trusts payload (payment is verified separately via the verify endpoint)
+- ✅ Webhook signature verified using `x-razorpay-signature` header
+- Signature computed as HMAC-SHA256 of raw body with business's Razorpay key secret
+- Returns 401 on invalid signature (prevents spoofing)
+- Uses `express.raw()` middleware to preserve exact body bytes for verification
