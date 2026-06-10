@@ -6,6 +6,7 @@ import { InvoiceStatus, InvoiceItem, Plan } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { isWithinLimit } from '../utils/planLimits.js';
 import { notifyNewInvoice } from './notification.service.js';
+import { cacheGet, cacheSet, cacheInvalidatePrefix } from '../utils/cache.js';
 
 export async function createInvoice(
   userId: string,
@@ -110,6 +111,7 @@ export async function createInvoice(
     changedBy: userId,
   });
 
+  cacheInvalidatePrefix(`invoice-stats:${userId}:`);
   return invoice;
 }
 
@@ -313,7 +315,13 @@ export async function deleteInvoice(invoiceId: string, userId: string) {
   return { message: 'Invoice deleted successfully' };
 }
 
-export async function getInvoiceStats(userId: string, businessId: string) {
+export async function getInvoiceStats(userId: string, businessId: string, skipCache = false) {
+  const cacheKey = `invoice-stats:${userId}:${businessId}`;
+  if (!skipCache) {
+    const cached = cacheGet<ReturnType<typeof getInvoiceStats>>(cacheKey);
+    if (cached) return cached;
+  }
+
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -383,6 +391,10 @@ export async function getInvoiceStats(userId: string, businessId: string) {
     draftCount,
     recentInvoices,
   };
+
+  // Cache for 5 minutes
+  cacheSet(cacheKey, result, 300);
+  return result;
 }
 
 export async function duplicateInvoice(
