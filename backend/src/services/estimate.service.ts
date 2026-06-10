@@ -302,3 +302,48 @@ export async function deleteEstimate(estimateId: string, userId: string) {
 
   return { message: 'Estimate deleted successfully' };
 }
+
+/** Bulk update status for multiple estimates. */
+export async function bulkUpdateEstimateStatus(
+  estimateIds: string[],
+  userId: string,
+  newStatus: EstimateStatus
+): Promise<{ updated: number }> {
+  const result = await prisma.estimate.updateMany({
+    where: { id: { in: estimateIds }, userId, deletedAt: null },
+    data: { status: newStatus },
+  });
+
+  await logStatusChange({
+    entity: 'Estimate',
+    entityId: estimateIds.join(','),
+    action: 'BULK_STATUS_CHANGE',
+    newValue: newStatus,
+    description: `Bulk updated ${result.count} estimates to ${newStatus}`,
+    changedBy: userId,
+  });
+
+  return { updated: result.count };
+}
+
+/** Bulk delete multiple estimates. */
+export async function bulkDeleteEstimates(
+  estimateIds: string[],
+  userId: string
+): Promise<{ deleted: number }> {
+  const result = await prisma.estimate.updateMany({
+    where: { id: { in: estimateIds }, userId, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+
+  await logStatusChange({
+    entity: 'Estimate',
+    entityId: estimateIds.join(','),
+    action: 'BULK_DELETE',
+    newValue: 'Deleted',
+    description: `Bulk deleted ${result.count} estimates`,
+    changedBy: userId,
+  });
+
+  return { deleted: result.count };
+}

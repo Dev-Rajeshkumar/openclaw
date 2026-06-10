@@ -135,3 +135,42 @@ export const remove = async (
     next(error);
   }
 };
+
+export const bulkUpdateStatus = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new AppError('ids array required', 400);
+    }
+    if (!status) {
+      throw new AppError('status is required', 400);
+    }
+    const result = await estimateService.bulkUpdateEstimateStatus(ids, userId, status);
+    res.status(200).json(ApiResponse.success(result, `${result.updated} estimates updated`));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const bulkDelete = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new AppError('ids array required', 400);
+    }
+    const result = await estimateService.bulkDeleteEstimates(ids, userId);
+    res.status(200).json(ApiResponse.success(result, `${result.deleted} estimates deleted`));
+  } catch (error) {
+    next(error);
+  }
+};

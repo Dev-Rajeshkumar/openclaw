@@ -28,4 +28,8 @@ router.patch(
 router.post('/:id/convert', estimateController.convertToInvoice);
 router.delete('/:id', estimateController.remove);
 
+// Bulk operations
+router.post('/bulk/status', estimateController.bulkUpdateStatus);
+router.post('/bulk/delete', estimateController.bulkDelete);
+
 export default router;
