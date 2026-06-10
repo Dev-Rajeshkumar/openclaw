@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as authController from '../controllers/auth.controller.js';
 import { validate } from '../middleware/validate.js';
-import { authLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, passwordResetLimiter, registerLimiter } from '../middleware/rateLimiter.js';
 import { auth } from '../middleware/auth.js';
 import {
   registerSchema,
@@ -14,7 +14,7 @@ const router = Router();
 
 router.post(
   '/register',
-  authLimiter,
+  registerLimiter,
   validate(registerSchema),
   authController.register
 );
@@ -35,11 +35,15 @@ router.post(
 
 router.post(
   '/forgot-password',
-  authLimiter,
+  passwordResetLimiter,
   validate(forgotPasswordSchema),
   authController.forgotPassword
 );
 
 router.get('/me', auth, authController.getMe);
+
+// Token management
+router.post('/refresh', authLimiter, authController.refreshToken);
+router.post('/logout', auth, authController.logout);
 
 export default router;
