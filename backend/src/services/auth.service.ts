@@ -56,7 +56,7 @@ export async function rotateRefreshToken(
   oldToken: string,
   ipAddress?: string,
   userAgent?: string
-): Promise<{ accessToken: string; refreshToken: string; user: any }> {
+): Promise<{ accessToken: string; refreshToken: string; user: { id: string; email: string; fullName: string; plan: string; isEmailVerified: boolean; avatar: string | null; currency: string; language: string; timezone: string } }> {
   // Verify the old token signature
   let payload: JwtPayload;
   try {

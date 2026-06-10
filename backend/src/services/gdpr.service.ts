@@ -5,9 +5,13 @@
 
 import prisma from '../prisma/index.js';
 import { AppError } from '../utils/response.js';
+import type { ExportedUserData, SafeUserData } from '../types/gdpr.js';
+
+/** Fields to strip from user data before export. */
+const SENSITIVE_USER_FIELDS = ['password', 'googleId'] as const;
 
 /** Export all user data in a portable JSON format. */
-export async function exportUserData(userId: string) {
+export async function exportUserData(userId: string): Promise<ExportedUserData> {
   const user = await prisma.user.findUnique({
     where: { id: userId, deletedAt: null },
     include: {
@@ -34,12 +38,15 @@ export async function exportUserData(userId: string) {
   if (!user) throw new AppError('User not found', 404);
 
   // Remove sensitive internal fields
-  const { password, googleId, ...safeUser } = user as any;
+  const safeUser = { ...user } as Record<string, unknown>;
+  for (const field of SENSITIVE_USER_FIELDS) {
+    delete safeUser[field];
+  }
 
   return {
     exportDate: new Date().toISOString(),
     format: 'BillingBee GDPR Export v1',
-    user: safeUser,
+    user: safeUser as SafeUserData,
   };
 }
 
@@ -54,7 +61,6 @@ export async function deleteUserAccount(userId: string): Promise<{ deleted: bool
   if (!user) throw new AppError('User not found', 404);
 
   await prisma.$transaction(async (tx) => {
-    // Delete all user data
     await tx.refreshToken.deleteMany({ where: { userId } });
     await tx.notification.deleteMany({ where: { userId } });
     await tx.activityLog.deleteMany({ where: { userId } });
@@ -74,8 +80,6 @@ export async function deleteUserAccount(userId: string): Promise<{ deleted: bool
     await tx.product.deleteMany({ where: { userId } });
     await tx.service.deleteMany({ where: { userId } });
     await tx.business.deleteMany({ where: { userId } });
-
-    // Finally delete the user
     await tx.user.delete({ where: { id: userId } });
   });
 
