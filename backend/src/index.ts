@@ -7,9 +7,9 @@ import { config } from './config/index.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { activityLogger } from './middleware/activityLogger.js';
+import { sanitizeInput } from './middleware/sanitize.js';
 import { sendDiscordNotification } from './services/notification.service.js';
-import { processRecurringInvoices } from './jobs/recurringInvoice.job.js';
-import { processEmailReminders } from './jobs/emailReminder.job.js';
+import { initCronJobs } from './jobs/cronScheduler.js';
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
@@ -37,6 +37,8 @@ import subscriptionRoutes from './routes/subscription.routes.js';
 import invoiceTemplateRoutes from './routes/invoiceTemplate.routes.js';
 import apiKeyRoutes from './routes/apiKey.routes.js';
 import notificationPreferenceRoutes from './routes/notificationPreference.routes.js';
+import gdprRoutes from './routes/gdpr.routes.js';
+import reminderScheduleRoutes from './routes/reminderSchedule.routes.js';
 
 const app = express();
 const API_PREFIX = `/api/${config.apiVersion}`;
@@ -50,6 +52,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Business-Id'],
 }));
 app.use(express.json({ limit: '10mb' }));
+app.use(sanitizeInput);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan(config.env === 'development' ? 'dev' : 'combined'));
 app.use(generalLimiter);
@@ -94,6 +97,8 @@ app.use(`${API_PREFIX}/subscriptions`, subscriptionRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/invoice-templates`, invoiceTemplateRoutes);
 app.use(`${API_PREFIX}/api-keys`, apiKeyRoutes);
 app.use(`${API_PREFIX}/notification-preferences`, notificationPreferenceRoutes);
+app.use(`${API_PREFIX}/gdpr`, gdprRoutes);
+app.use(`${API_PREFIX}/businesses/:businessId/reminder-schedule`, reminderScheduleRoutes);
 app.use(`${API_PREFIX}/businesses/:businessId/team`, teamRoutes);
 app.use(`${API_PREFIX}/activity-logs`, activityLogRoutes);
 app.use(`${API_PREFIX}/status-logs`, statusLogRoutes);
@@ -116,43 +121,9 @@ app.use(errorHandler);
 // ─── AI Routes ──────────────────────────────────────────────────
 app.use(`${API_PREFIX}/ai`, aiInvoiceRoutes);
 
-// ─── Cron Jobs ────────────────────────────────────────────────────
-// Run recurring invoice processor every hour
+// ─── Cron Jobs (with MongoDB locking) ────────────────────────────
 if (config.env !== 'test') {
-  // Run recurring invoice processor every hour
-  setInterval(async () => {
-    try {
-      const result = await processRecurringInvoices();
-      if (result.processed > 0) {
-        console.log(`[Cron] Processed ${result.processed} recurring invoices`);
-      }
-    } catch (error) {
-      console.error('[Cron] Recurring invoice job failed:', error);
-    }
-  }, 60 * 60 * 1000); // Every hour
-
-  // Run email reminders daily (24h * 60m * 60s * 1000ms)
-  // Stagger by 5 minutes so it doesn't fire at the same time as the hourly job
-  setTimeout(() => {
-    processEmailReminders().catch((e) =>
-      console.error('[Cron] Email reminder job failed:', e)
-    );
-    setInterval(async () => {
-      try {
-        const result = await processEmailReminders();
-        if (result.sent > 0) {
-          console.log(`[Cron] Sent ${result.sent} email reminders`);
-        }
-      } catch (error) {
-        console.error('[Cron] Email reminder job failed:', error);
-      }
-    }, 24 * 60 * 60 * 1000); // Every 24 hours
-  }, 5 * 60 * 1000); // Start after 5 minutes
-
-  // Run once on startup after 30 seconds
-  setTimeout(() => {
-    processRecurringInvoices().catch(console.error);
-  }, 30000);
+  initCronJobs();
 }
 
 // ─── Start Server ───────────────────────────────────────────────────
