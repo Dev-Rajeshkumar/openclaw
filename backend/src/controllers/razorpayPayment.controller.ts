@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Response, NextFunction, Request } from 'express';
 import prisma from '../prisma/index.js';
 import * as razorpayService from '../services/razorpay.service.js';
@@ -128,46 +129,104 @@ export const webhook = async (
 ) => {
   try {
     const signature = req.headers['x-razorpay-signature'] as string;
-    const body = JSON.stringify(req.body);
 
-    // Note: In production, verify webhook signature too
-    // For now, we'll trust the payload since we verify the payment separately
+    if (!signature) {
+      throw new AppError('Missing webhook signature', 401);
+    }
 
+    // Verify webhook signature against all businesses with Razorpay configured
+    // We need to find the business by matching the order/payment
     const event = req.body.event;
     const paymentData = req.body.payload?.payment?.entity;
 
-    if (event === 'payment.captured' && paymentData) {
-      const notes = paymentData.notes || {};
-      const invoiceId = notes.invoiceId;
+    if (!paymentData) {
+      res.json({ status: 'ok' });
+      return;
+    }
 
-      if (invoiceId) {
-        const invoice = await prisma.invoice.findFirst({
-          where: { id: invoiceId, deletedAt: null },
+    // Find the business that owns this order by looking up the invoice
+    const notes = paymentData.notes || {};
+    const invoiceId = notes.invoiceId;
+
+    if (!invoiceId) {
+      // Can't verify without invoice context — still return 200 so Razorpay doesn't retry
+      console.warn('[Webhook] No invoiceId in payment notes, skipping');
+      res.json({ status: 'ok' });
+      return;
+    }
+
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId, deletedAt: null },
+    });
+
+    if (!invoice) {
+      console.warn(`[Webhook] Invoice ${invoiceId} not found, skipping`);
+      res.json({ status: 'ok' });
+      return;
+    }
+
+    // Get the business and verify the webhook signature
+    const business = await prisma.business.findFirst({
+      where: { id: invoice.businessId, deletedAt: null },
+    });
+
+    if (!business?.razorpayKeySecret) {
+      console.warn('[Webhook] Business or Razorpay secret not found');
+      res.json({ status: 'ok' });
+      return;
+    }
+
+    // Verify webhook signature using Razorpay's method
+    // The raw body is available as a Buffer from express.raw() middleware
+    const rawBody = req.body instanceof Buffer ? req.body.toString('utf8') : JSON.stringify(req.body);
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      throw new AppError('Invalid webhook payload', 400);
+    }
+
+    // Re-attach parsed body so downstream code works
+    req.body = parsedBody;
+    const body = rawBody;
+    const expectedSignature = crypto
+      .createHmac('sha256', business.razorpayKeySecret)
+      .update(body)
+      .digest('hex');
+
+    if (signature !== expectedSignature) {
+      console.error('[Webhook] Invalid signature — possible spoofing attempt');
+      throw new AppError('Invalid webhook signature', 401);
+    }
+
+    console.log(`[Webhook] Verified signature for event: ${event}`);
+
+    if (event === 'payment.captured' && invoice.status !== InvoiceStatus.Paid) {
+      await prisma.$transaction(async (tx) => {
+        await tx.payment.create({
+          data: {
+            invoiceId: invoice.id,
+            userId: invoice.userId,
+            amount: paymentData.amount / 100,
+            method: PaymentMethod.Online,
+            reference: paymentData.id,
+            status: PaymentStatus.Completed,
+            paidAt: new Date(),
+            razorpayOrderId: paymentData.order_id,
+            razorpayPaymentId: paymentData.id,
+          },
         });
 
-        if (invoice && invoice.status !== InvoiceStatus.Paid) {
-          await prisma.$transaction(async (tx) => {
-            await tx.payment.create({
-              data: {
-                invoiceId: invoice.id,
-                userId: invoice.userId,
-                amount: paymentData.amount / 100,
-                method: PaymentMethod.Online,
-                reference: paymentData.id,
-                status: PaymentStatus.Completed,
-                paidAt: new Date(),
-                razorpayOrderId: paymentData.order_id,
-                razorpayPaymentId: paymentData.id,
-              },
-            });
+        await tx.invoice.update({
+          where: { id: invoice.id },
+          data: { status: InvoiceStatus.Paid },
+        });
+      });
 
-            await tx.invoice.update({
-              where: { id: invoice.id },
-              data: { status: InvoiceStatus.Paid },
-            });
-          });
-        }
-      }
+      console.log(`[Webhook] Invoice ${invoice.invoiceNumber} marked as Paid`);
+    } else if (event === 'payment.failed') {
+      console.log(`[Webhook] Payment failed for invoice ${invoice.invoiceNumber}`);
+      // Could notify the user here
     }
 
     res.json({ status: 'ok' });

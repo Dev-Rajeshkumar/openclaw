@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, raw } from 'express';
 import * as razorpayPaymentController from '../controllers/razorpayPayment.controller.js';
 import { auth } from '../middleware/auth.js';
 
@@ -9,7 +9,8 @@ router.post('/invoice/:token/create-order', razorpayPaymentController.createOrde
 router.post('/invoice/:token/verify', razorpayPaymentController.verifyPayment);
 
 // Webhook (no auth — Razorpay calls this)
-router.post('/webhook', razorpayPaymentController.webhook);
+// Use raw body parser so we can verify the HMAC signature
+router.post('/webhook', raw({ type: 'application/json' }), razorpayPaymentController.webhook);
 
 // Authenticated routes
 router.use(auth);
