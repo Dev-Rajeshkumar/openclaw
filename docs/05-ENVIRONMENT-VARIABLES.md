@@ -40,6 +40,11 @@ DISCORD_NOTIFICATIONS_ENABLED=false
 UPLOAD_DIR=./uploads
 MAX_FILE_SIZE=10485760
 
+# ─── OpenAI (AI Invoice Parsing) ──────────────────────────
+OPENAI_API_KEY=sk-your-openai-api-key
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
+
 # ─── Rate Limiting ────────────────────────────────────────
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
@@ -80,6 +85,9 @@ NEXT_PUBLIC_API_URL=http://localhost:4000/api
 | `DISCORD_NOTIFICATIONS_ENABLED` | No | `false` | Enable Discord notifications |
 | `UPLOAD_DIR` | No | `./uploads` | File upload directory |
 | `MAX_FILE_SIZE` | No | `10485760` | Max file size (10MB) |
+| `OPENAI_API_KEY` | No | — | OpenAI API key for AI invoice parsing |
+| `OPENAI_BASE_URL` | No | `https://api.openai.com/v1` | OpenAI API base URL (supports proxies) |
+| `OPENAI_MODEL` | No | `gpt-4o-mini` | OpenAI model for AI features |
 | `RATE_LIMIT_WINDOW_MS` | No | `900000` | Rate limit window (15min) |
 | `RATE_LIMIT_MAX_REQUESTS` | No | `100` | Max requests per window |
 | `NEXT_PUBLIC_API_URL` | **Yes** | — | Backend API URL (frontend) |
