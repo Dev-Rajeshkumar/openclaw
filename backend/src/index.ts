@@ -10,6 +10,7 @@ import { activityLogger } from './middleware/activityLogger.js';
 import { sanitizeInput } from './middleware/sanitize.js';
 import { sendDiscordNotification } from './services/notification.service.js';
 import { initCronJobs } from './jobs/cronScheduler.js';
+import prisma from './prisma/index.js';
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
@@ -61,13 +62,42 @@ app.use(generalLimiter);
 app.use('/uploads', express.static(path.resolve(config.upload.dir)));
 
 // ─── Health Check ───────────────────────────────────────────────────
-app.get('/health', (_req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'BillingBee API is running',
+app.get('/health', async (_req, res) => {
+  const checks: Record<string, { status: string; responseTime?: string; error?: string }> = {};
+  let overallStatus = 'healthy';
+
+  // Check MongoDB connectivity
+  const dbStart = Date.now();
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = { status: 'up', responseTime: `${Date.now() - dbStart}ms` };
+  } catch (err) {
+    checks.database = { status: 'down', error: err instanceof Error ? err.message : 'Unknown error' };
+    overallStatus = 'unhealthy';
+  }
+
+  // Check memory usage
+  const memUsage = process.memoryUsage();
+  checks.memory = {
+    status: 'up',
+    responseTime: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB used / ${Math.round(memUsage.heapTotal / 1024 / 1024)}MB total`,
+  };
+
+  // Check uptime
+  checks.uptime = {
+    status: 'up',
+    responseTime: `${Math.round(process.uptime())}s`,
+  };
+
+  const statusCode = overallStatus === 'healthy' ? 200 : 503;
+  res.status(statusCode).json({
+    success: overallStatus === 'healthy',
+    status: overallStatus,
+    message: overallStatus === 'healthy' ? 'BillingBee API is running' : 'Service unavailable',
     version: '2.0.0',
     timestamp: new Date().toISOString(),
     environment: config.env,
+    checks,
   });
 });
 
