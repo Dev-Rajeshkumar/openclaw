@@ -11,6 +11,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
 import { CommandPalette } from '@/components/CommandPalette';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -185,7 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <CommandPalette />
         </div>
 
-        <main className="p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-8">{children}</main>
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-8"><ErrorBoundary>{children}</ErrorBoundary></main>
       </div>
 
       <OfflineIndicator />
