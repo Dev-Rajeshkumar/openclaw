@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import * as fileService from '../services/file.service.js';
+import { uploadFile as uploadToStorage } from '../services/storage.service.js';
 import { AuthenticatedRequest } from '../types/index.js';
 import { ApiResponse } from '../utils/response.js';
 
@@ -18,11 +19,18 @@ export const upload = async (
       return;
     }
 
+    // Upload to configured storage provider (local/S3/Cloudinary)
+    const storageResult = await uploadToStorage(
+      file.buffer,
+      file.originalname,
+      file.mimetype
+    );
+
     const uploadedFile = await fileService.uploadFile(userId, businessId, {
       entityType: req.body.entityType || 'general',
       entityId: req.body.entityId || 'general',
       fileName: file.originalname,
-      fileUrl: `/uploads/${file.filename}`,
+      fileUrl: storageResult.url,
       mimeType: file.mimetype,
       size: file.size,
     });

@@ -3,7 +3,8 @@ import prisma from '../prisma/index.js';
 import * as invoiceService from '../services/invoice.service.js';
 import * as templateService from '../services/invoiceTemplate.service.js';
 import { generateInvoicePDF } from '../utils/pdf.js';
-import { sendInvoiceEmail } from '../utils/email.js';
+import { queueEmail } from '../services/emailQueue.service.js';
+import { buildInvoiceEmailHTML } from '../utils/email.js';
 import { AuthenticatedRequest, InvoiceStatus, TeamRole } from '../types/index.js';
 import { ApiResponse, AppError } from '../utils/response.js';
 import { logStatusChange } from '../services/statusLog.service.js';
@@ -178,18 +179,13 @@ export const sendEmail = async (
       res.status(400).json({ success: false, message: 'Client has no email address' });
       return;
     }
-    const sent = await sendInvoiceEmail(
+    // Queue email asynchronously — don't block the response
+    queueEmail(
       invoice.client.email,
-      invoice.invoiceNumber,
-      invoice.business?.name || 'BillingBee',
-      invoice.total,
-      invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-IN') : 'N/A',
+      `Invoice ${invoice.invoiceNumber} from ${invoice.business?.name || 'BillingBee'}`,
+      buildInvoiceEmailHTML(invoice),
     );
-    if (sent) {
-      res.json(ApiResponse.success(null, `Invoice sent to ${invoice.client.email}`));
-    } else {
-      res.status(500).json({ success: false, message: 'Failed to send email' });
-    }
+    res.json(ApiResponse.success(null, `Invoice email queued for ${invoice.client.email}`));
   } catch (error) {
     next(error);
   }

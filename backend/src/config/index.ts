@@ -43,6 +43,21 @@ export const config = {
   upload: {
     dir: process.env.UPLOAD_DIR || './uploads',
     maxSize: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10), // 10MB
+    // Storage backend: 'local' | 's3' | 'cloudinary'
+    provider: (process.env.UPLOAD_PROVIDER || 'local') as 'local' | 's3' | 'cloudinary',
+    s3: {
+      bucket: process.env.S3_BUCKET || '',
+      region: process.env.S3_REGION || 'ap-south-1',
+      accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
+      endpoint: process.env.S3_ENDPOINT || '', // for MinIO compatibility
+      cdnUrl: process.env.S3_CDN_URL || '',
+    },
+    cloudinary: {
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+      apiKey: process.env.CLOUDINARY_API_KEY || '',
+      apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    },
   },
 
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',

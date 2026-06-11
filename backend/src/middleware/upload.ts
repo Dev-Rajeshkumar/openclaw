@@ -1,25 +1,14 @@
 import multer from 'multer';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs';
 import { config } from '../config/index.js';
 import { AppError } from '../utils/response.js';
 
-// Ensure upload directory exists
-if (!fs.existsSync(config.upload.dir)) {
-  fs.mkdirSync(config.upload.dir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, config.upload.dir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const filename = `${uuidv4()}${ext}`;
-    cb(null, filename);
-  },
-});
+/**
+ * Memory storage multer config.
+ * Files are stored in memory as Buffers, then uploaded to the configured
+ * storage provider (local/S3/Cloudinary) by the storage service.
+ * This ensures consistent behavior across all storage backends.
+ */
+const storage = multer.memoryStorage();
 
 const fileFilter = (
   _req: Express.Request,
@@ -27,17 +16,13 @@ const fileFilter = (
   cb: multer.FileFilterCallback
 ) => {
   const allowedMimes = [
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/csv',
-    'text/plain',
+    'text/csv', 'text/plain',
   ];
 
   if (allowedMimes.includes(file.mimetype)) {
@@ -69,12 +54,7 @@ export const handleUploadError = (
 ) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      next(
-        new AppError(
-          `File too large. Maximum size is ${config.upload.maxSize / 1024 / 1024}MB.`,
-          400
-        )
-      );
+      next(new AppError(`File too large. Maximum size is ${config.upload.maxSize / 1024 / 1024}MB.`, 400));
     } else if (err.code === 'LIMIT_FILE_COUNT') {
       next(new AppError('Too many files. Maximum is 5 files.', 400));
     } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {

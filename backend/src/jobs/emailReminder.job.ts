@@ -62,7 +62,7 @@ async function sendReminderEmail(
   daysDiff: number,
   escalationLevel: number
 ) {
-  const { sendEmail } = await import('../utils/email.js');
+  const { queueEmail } = await import('../services/emailQueue.service.js');
 
   const isPreDue = daysDiff > 0;
   const isDueToday = daysDiff === 0;
@@ -150,7 +150,7 @@ async function sendReminderEmail(
 
   if (!invoice.client?.email) return;
 
-  await sendEmail({ to: invoice.client.email, subject, html: body });
+  queueEmail(invoice.client.email, subject, body);
 }
 
 export async function processEmailReminders(): Promise<{

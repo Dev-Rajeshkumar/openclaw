@@ -1,6 +1,7 @@
 import prisma from '../prisma/index.js';
 import { AppError } from '../utils/response.js';
 import { logStatusChange } from './statusLog.service.js';
+import { deleteFile as deleteFromStorage } from './storage.service.js';
 
 export async function uploadFile(
   userId: string,
@@ -84,6 +85,11 @@ export async function deleteFile(fileId: string, userId: string) {
   await prisma.file.update({
     where: { id: fileId },
     data: { deletedAt: new Date() },
+  });
+
+  // Delete from storage (S3/Cloudinary/local) — best effort, don't fail if storage delete fails
+  await deleteFromStorage(file.fileUrl, file.mimeType).catch((err: Error) => {
+    console.error(`[File] Storage delete failed for ${file.fileUrl}:`, err.message);
   });
 
   await logStatusChange({

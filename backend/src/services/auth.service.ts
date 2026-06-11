@@ -8,6 +8,7 @@ import { AppError } from '../utils/response.js';
 import { JwtPayload, Plan } from '../types/index.js';
 import { notifyNewUser } from './notification.service.js';
 import { sendEmail } from '../utils/email.js';
+import { queueEmail } from './emailQueue.service.js';
 import { logStatusChange } from './statusLog.service.js';
 
 interface RegisterInput { email: string; password: string; fullName: string; }
@@ -200,16 +201,17 @@ export async function resetPassword(email: string) {
   const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
 
   if (config.smtp.user) {
-    await sendEmail({
-      to: email, subject: 'Password Reset - BillingBee',
-      html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    queueEmail(
+      email,
+      'Password Reset - BillingBee',
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Password Reset Request</h2>
         <p>You requested a password reset for your BillingBee account.</p>
         <p>Click the link below to reset your password:</p>
         <a href="${config.frontendUrl}/reset-password?token=${resetToken}" style="display: inline-block; background: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Reset Password</a>
         <p style="color: #718096;">This link expires in 1 hour.</p>
-      </div>`,
-    });
+      </div>`
+    );
   }
 
   return { message: 'If this email exists, a reset link has been sent.' };

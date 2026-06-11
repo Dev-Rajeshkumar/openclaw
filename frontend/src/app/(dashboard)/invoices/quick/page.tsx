@@ -9,6 +9,7 @@ import { Zap, ArrowLeft, Plus, Trash2, Loader2, CheckCircle } from 'lucide-react
 import { IClient, IProduct } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import api from '@/lib/api';
+import { invoiceSchema } from '@/lib/validations';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,9 +29,7 @@ export default function QuickInvoicePage() {
   const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null);
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<QuickInvoiceForm>({
-    resolver: zodResolver(
-      (await import('@/lib/validations')).invoiceSchema
-    ),
+    resolver: zodResolver(invoiceSchema),
     defaultValues: {
       clientId: '',
       items: [{ description: '', quantity: 1, rate: 0 }],

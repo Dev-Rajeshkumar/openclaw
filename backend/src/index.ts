@@ -58,8 +58,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan(config.env === 'development' ? 'dev' : 'combined'));
 app.use(generalLimiter);
 
-// ─── Static Files ───────────────────────────────────────────────────
-app.use('/uploads', express.static(path.resolve(config.upload.dir)));
+// ─── Static Files (local storage only) ────────────────────────────
+if (config.upload.provider === 'local') {
+  app.use('/uploads', express.static(path.resolve(config.upload.dir)));
+}
 
 // ─── Health Check ───────────────────────────────────────────────────
 app.get('/health', async (_req, res) => {

@@ -170,6 +170,31 @@ export async function sendInvitationEmail(
   });
 }
 
+/** Build invoice email HTML (exported for use with email queue). */
+export function buildInvoiceEmailHTML(invoice: {
+  invoiceNumber: string;
+  business?: { name: string } | null;
+  total: number;
+  dueDate?: Date | string | null;
+}): string {
+  const businessName = invoice.business?.name || 'BillingBee';
+  const dueDate = invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-IN') : 'N/A';
+  return `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #2d3748;">Invoice from ${businessName}</h2>
+      <p>Dear Customer,</p>
+      <p>Please find the details of your invoice below:</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr><td style="padding: 8px; border: 1px solid #e2e8f0;"><strong>Invoice Number</strong></td><td style="padding: 8px; border: 1px solid #e2e8f0;">${invoice.invoiceNumber}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #e2e8f0;"><strong>Amount</strong></td><td style="padding: 8px; border: 1px solid #e2e8f0;">INR ${invoice.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #e2e8f0;"><strong>Due Date</strong></td><td style="padding: 8px; border: 1px solid #e2e8f0;">${dueDate}</td></tr>
+      </table>
+      <p>Please make the payment by the due date to avoid any late fees.</p>
+      <p>Thank you for your business!</p>
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+      <p style="color: #718096; font-size: 12px;">This is an automated email from BillingBee. Please do not reply to this email.</p>
+    </div>`;
+}
+
 export async function verifyEmailConnection(): Promise<boolean> {
   try {
     await getTransporter().verify();

@@ -4,6 +4,7 @@ import { AppError } from '../utils/response.js';
 import { logStatusChange } from './statusLog.service.js';
 import { TeamRole, InvitationStatus } from '../types/index.js';
 import { sendInvitationEmail } from '../utils/email.js';
+import { queueEmail } from './emailQueue.service.js';
 import { config } from '../config/index.js';
 
 export async function inviteTeamMember(
@@ -69,13 +70,20 @@ export async function inviteTeamMember(
 
   if (business && inviter) {
     const inviteLink = `${config.frontendUrl}/invite?token=${token}`;
-    sendInvitationEmail(
+    queueEmail(
       data.email,
-      business.name,
-      inviter.fullName,
-      data.role,
-      inviteLink
-    ).catch(() => {});
+      `Invitation to join ${business.name} on BillingBee`,
+      `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2d3748;">You've been invited to ${business.name}</h2>
+        <p>Hello,</p>
+        <p><strong>${inviter.fullName}</strong> has invited you to join <strong>${business.name}</strong> on BillingBee as a <strong>${data.role}</strong>.</p>
+        <p>Click the button below to accept the invitation:</p>
+        <a href="${inviteLink}" style="display: inline-block; background: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0;">Accept Invitation</a>
+        <p style="color: #718096; font-size: 12px;">This link will expire in 7 days.</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+        <p style="color: #718096; font-size: 12px;">This is an automated email from BillingBee.</p>
+      </div>`
+    );
   }
 
   await logStatusChange({
