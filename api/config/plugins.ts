@@ -1,67 +1,124 @@
 export default ({ env }) => ({
-  // --- Built-in Strapi plugins ---
+  // ── Strapi Built-in Plugins ────────────────────────────────
+  'users-permissions': {
+    config: {
+      jwt: {
+        expiresIn: '30d',
+      },
+      ratelimit: {
+        interval: 60000,
+        max: 10,
+      },
+    },
+  },
+
   graphql: {
     enabled: true,
     config: {
       endpoint: '/graphql',
       shadowCRUD: true,
-      playgroundAlways: env('NODE_ENV') !== 'production',
-      depthLimit: 7,
-      amountLimit: 100,
-    },
-  },
-  email: {
-    enabled: true,
-    config: {
-      provider: env('EMAIL_PROVIDER', 'nodemailer'),
-      providerOptions: {
-        host: env('SMTP_HOST', 'smtp.sendgrid.net'),
-        port: env.int('SMTP_PORT', 587),
-        auth: {
-          user: env('SMTP_USERNAME', 'apikey'),
-          pass: env('SMTP_PASSWORD', ''),
-        },
-      },
-      settings: {
-        defaultFrom: env('DEFAULT_FROM_EMAIL', 'noreply@cms.local'),
-        defaultReplyTo: env('DEFAULT_REPLY_TO', 'admin@cms.local'),
+      playgroundAlways: env('NODE_ENV') === 'development',
+      defaultLimit: 25,
+      maxLimit: 100,
+      apolloServer: {
+        introspection: env('NODE_ENV') === 'development',
       },
     },
   },
-  upload: {
-    enabled: true,
-    config: {
-      provider: env('UPLOAD_PROVIDER', 'local'),
-      providerOptions: {
-        ...(env('UPLOAD_PROVIDER') === 'aws-s3'
-          ? {
-              accessKeyId: env('AWS_ACCESS_KEY_ID'),
-              secretAccessKey: env('AWS_SECRET_ACCESS_KEY'),
-              region: env('AWS_REGION', 'us-east-1'),
-              params: { Bucket: env('AWS_BUCKET') },
-            }
-          : {}),
-      },
-      sizeLimit: 10 * 1024 * 1024, // 10MB
-    },
-  },
-  'users-permissions': {
-    enabled: true,
-    config: {
-      jwtSecret: env('JWT_SECRET'),
-      jwt: {
-        expiresIn: '7d',
-      },
-      refreshToken: {
-        expiresIn: '30d',
-      },
-    },
-  },
+
   i18n: {
     enabled: true,
     config: {
       defaultLocale: 'en',
-      locales: ['en', 'es', 'fr', 'de', 'hi', 'ja', 'zh'],
+      locales: ['en', 'es', 'fr', 'de', 'ja', 'zh', 'ko', 'pt', 'it', 'ar'],
     },
+  },
+
+  email: {
+    enabled: true,
+    config: {
+      provider: 'nodemailer',
+      providerOptions: {
+        host: env('SMTP_HOST', 'smtp'),
+        port: env.int('SMTP_PORT', 1025),
+        auth: {
+          user: env('SMTP_USERNAME', ''),
+          pass: env('SMTP_PASSWORD', ''),
+        },
+        ignoreTLS: env('NODE_ENV') === 'development',
+      },
+      settings: {
+        defaultFrom: env('DEFAULT_FROM_EMAIL', 'noreply@cms.local'),
+        defaultReplyTo: env('DEFAULT_REPLY_TO', 'noreply@cms.local'),
+      },
+    },
+  },
+
+  upload: {
+    enabled: true,
+    config: {
+      provider: 'local',
+      providerOptions: {
+        sizeLimit: 10 * 1024 * 1024, // 10MB
+      },
+      breakpoints: {
+        xlarge: 1920,
+        large: 1000,
+        medium: 750,
+        small: 500,
+        xsmall: 64,
+      },
+    },
+  },
+
+  // ── Custom Plugins ─────────────────────────────────────────
+  'comments-reactions': {
+    enabled: true,
+    resolve: './src/plugins/comments-reactions',
+  },
+
+  'ai-assistant': {
+    enabled: true,
+    resolve: './src/plugins/ai-assistant',
+  },
+
+  search: {
+    enabled: true,
+    resolve: './src/plugins/search',
+  },
+
+  newsletter: {
+    enabled: true,
+    resolve: './src/plugins/newsletter',
+  },
+
+  forms: {
+    enabled: true,
+    resolve: './src/plugins/forms',
+  },
+
+  analytics: {
+    enabled: true,
+    resolve: './src/plugins/analytics',
+  },
+
+  paywall: {
+    enabled: true,
+    resolve: './src/plugins/paywall',
+  },
+
+  'multi-site': {
+    enabled: true,
+    resolve: './src/plugins/multi-site',
+  },
+
+  webhooks: {
+    enabled: true,
+    resolve: './src/plugins/webhooks',
+  },
+
+  'audit-log': {
+    enabled: true,
+    resolve: './src/plugins/audit-log',
   },
 });

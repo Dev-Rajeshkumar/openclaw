@@ -1,49 +1,23 @@
-export default [
-  'strapi::logger',
-  'strapi::errors',
-  {
-    name: 'strapi::security',
-    config: {
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-          mediaSrc: ["'self'", 'data:', 'blob:', 'https:'],
-          scriptSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          connectSrc: ["'self'", 'https://api.openrouter.ai'],
-        },
-      },
+export default ({ env }) => ({
+  load: {
+    before: ['errors', 'logger', 'cors', 'responses', 'gzip'],
+    order: [
+      'Define the middlewares\' load order by putting their name in this array in the right order',
+    ],
+    after: ['parser', 'router'],
+  },
+  settings: {
+    cors: {
+      enabled: true,
+      origin: env.array('CORS_ORIGIN', ['http://localhost:3000', 'http://localhost:1337']),
+      headers: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    },
+    helmet: {
+      enabled: true,
       crossOriginEmbedderPolicy: false,
     },
-  },
-  {
-    name: 'strapi::cors',
-    config: {
-      origin: [
-        'http://localhost:3000',
-        'http://localhost:1337',
-        process.env.FRONTEND_URL || 'https://cms.example.com',
-      ],
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      headers: ['Content-Type', 'Authorization', 'X-Requested-With'],
-      credentials: true,
+    rateLimiter: {
+      enabled: true,
     },
   },
-  'strapi::poweredBy',
-  'strapi::query',
-  'strapi::body',
-  'strapi::session',
-  'strapi::favicon',
-  'strapi::public',
-  // Custom rate limiting middleware
-  {
-    name: 'global::rate-limiter',
-    config: {
-      windowMs: 15 * 60 * 1000, // 15 min
-      max: 100, // per IP
-      standardHeaders: true,
-      legacyHeaders: false,
-    },
-  },
-];
+});
