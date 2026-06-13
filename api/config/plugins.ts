@@ -121,4 +121,9 @@ export default ({ env }) => ({
     enabled: true,
     resolve: './src/plugins/audit-log',
   },
+
+  health: {
+    enabled: true,
+    resolve: './src/plugins/health',
+  },
 });

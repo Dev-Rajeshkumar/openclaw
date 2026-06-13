@@ -1,23 +1,20 @@
-export default ({ env }) => ({
-  load: {
-    before: ['errors', 'logger', 'cors', 'responses', 'gzip'],
-    order: [
-      'Define the middlewares\' load order by putting their name in this array in the right order',
-    ],
-    after: ['parser', 'router'],
+export default [
+  'strapi::logger',
+  'strapi::errors',
+  'strapi::security',
+  'strapi::cors',
+  'strapi::poweredBy',
+  'strapi::query',
+  'strapi::body',
+  'strapi::session',
+  'strapi::favicon',
+  'strapi::public',
+  {
+    name: 'global::slug-generator',
+    config: {},
   },
-  settings: {
-    cors: {
-      enabled: true,
-      origin: env.array('CORS_ORIGIN', ['http://localhost:3000', 'http://localhost:1337']),
-      headers: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    },
-    helmet: {
-      enabled: true,
-      crossOriginEmbedderPolicy: false,
-    },
-    rateLimiter: {
-      enabled: true,
-    },
+  {
+    name: 'global::rate-limiter',
+    config: {},
   },
-});
+];
