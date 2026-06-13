@@ -131,4 +131,24 @@ export default ({ env }) => ({
     enabled: true,
     resolve: './src/plugins/email-bounce',
   },
+
+  'rate-limit-dashboard': {
+    enabled: true,
+    resolve: './src/plugins/rate-limit-dashboard',
+  },
+
+  'webhook-retry': {
+    enabled: true,
+    resolve: './src/plugins/webhook-retry',
+  },
+
+  'content-scheduler': {
+    enabled: true,
+    resolve: './src/plugins/content-scheduler',
+  },
+
+  'activity-feed': {
+    enabled: true,
+    resolve: './src/plugins/activity-feed',
+  },
 });
