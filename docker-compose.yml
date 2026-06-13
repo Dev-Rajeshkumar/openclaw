@@ -2,13 +2,17 @@
 # 100% free, self-contained, one-command startup
 #
 # Usage:
-#   docker compose up -d          # Start all services
-#   docker compose logs -f api    # Follow Strapi logs
-#   docker compose logs -f web    # Follow Next.js logs
-#   docker compose down           # Stop all services
-#   docker compose down -v        # Stop + remove volumes (reset data)
+#   cp .env.example .env   # First time only
+#   docker compose up -d   # Start all services
+#
+# All services read from the root .env file.
 
 version: "3.9"
+
+# All services inherit environment from root .env
+x-common-env: &common-env
+  env_file:
+    - .env
 
 services:
   # ── PostgreSQL (Primary Database) ──────────────────────────
@@ -16,10 +20,11 @@ services:
     image: postgres:16-alpine
     container_name: cms-postgres
     restart: unless-stopped
+    <<: *common-env
     environment:
-      POSTGRES_DB: cms_db
-      POSTGRES_USER: cms_user
-      POSTGRES_PASSWORD: cms_password
+      POSTGRES_DB: ${DATABASE_NAME:-cms_db}
+      POSTGRES_USER: ${DATABASE_USERNAME:-cms_user}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-cms_password}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
@@ -27,7 +32,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cms_user -d cms_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-cms_user} -d ${DATABASE_NAME:-cms_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,6 +44,7 @@ services:
     image: redis:7-alpine
     container_name: cms-redis
     restart: unless-stopped
+    <<: *common-env
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
@@ -57,9 +63,10 @@ services:
     image: getmeili/meilisearch:v1.7
     container_name: cms-meilisearch
     restart: unless-stopped
+    <<: *common-env
     environment:
-      MEILI_MASTER_KEY: cms_master_key_change_in_production
-      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILI_API_KEY:-masterKey123}
+      MEILI_ENV: ${NODE_ENV:-development}
       MEILI_NO_ANALYTICS: "true"
     ports:
       - "7700:7700"
@@ -78,13 +85,14 @@ services:
     image: minio/minio:latest
     container_name: cms-minio
     restart: unless-stopped
+    <<: *common-env
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # Web Console
+      - "9000:9000"
+      - "9001:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -99,14 +107,15 @@ services:
   minio-init:
     image: minio/mc:latest
     container_name: cms-minio-init
+    <<: *common-env
     depends_on:
       minio:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 minioadmin minioadmin123;
-      mc mb local/cms-media --ignore-existing;
-      mc anonymous set download local/cms-media;
+      mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin123};
+      mc mb local/${MINIO_BUCKET:-cms-media} --ignore-existing;
+      mc anonymous set download local/${MINIO_BUCKET:-cms-media};
       exit 0;
       "
     networks:
@@ -119,39 +128,7 @@ services:
       dockerfile: Dockerfile
     container_name: cms-api
     restart: unless-stopped
-    environment:
-      NODE_ENV: development
-      DATABASE_CLIENT: postgres
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: cms_db
-      DATABASE_USERNAME: cms_user
-      DATABASE_PASSWORD: cms_password
-      DATABASE_SSL: "false"
-      APP_KEYS: "toBeModified1,toBeModified2"
-      API_TOKEN_SALT: toBeModified
-      ADMIN_JWT_SECRET: toBeModified
-      JWT_SECRET: toBeModified
-      TRANSFER_TOKEN_SALT: toBeModified
-      REDIS_URL: redis://redis:6379
-      MEILI_HOST: http://meilisearch:7700
-      MEILI_API_KEY: cms_master_key_change_in_production
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_USE_SSL: "false"
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin123
-      MINIO_BUCKET: cms-media
-      SMTP_HOST: mailpit
-      SMTP_PORT: 1025
-      SMTP_USERNAME: ""
-      SMTP_PASSWORD: ""
-      DEFAULT_FROM_EMAIL: noreply@cms.local
-      FRONTEND_URL: http://localhost:3000
-      API_URL: http://localhost:1337
-      AI_PROVIDER: openrouter
-      AI_API_KEY: ${AI_API_KEY:-}
-      AI_MODEL: meta-llama/llama-3.1-70b
+    <<: *common-env
     ports:
       - "1337:1337"
     volumes:
@@ -178,13 +155,7 @@ services:
       dockerfile: Dockerfile
     container_name: cms-web
     restart: unless-stopped
-    environment:
-      NODE_ENV: development
-      NEXT_PUBLIC_API_URL: http://localhost:1337
-      NEXT_PUBLIC_STRAPI_URL: http://localhost:1337
-      API_URL_INTERNAL: http://api:1337
-      DATABASE_URL: postgresql://cms_user:cms_password@postgres:5432/cms_db
-      REDIS_URL: redis://redis:6379
+    <<: *common-env
     ports:
       - "3000:3000"
     volumes:
@@ -203,9 +174,10 @@ services:
     image: axllent/mailpit:latest
     container_name: cms-mailpit
     restart: unless-stopped
+    <<: *common-env
     ports:
-      - "1025:1025"   # SMTP port
-      - "8025:8025"   # Web UI
+      - "1025:1025"
+      - "8025:8025"
     networks:
       - cms-network
 
@@ -214,6 +186,7 @@ services:
     image: rediscommander/redis-commander:latest
     container_name: cms-redis-ui
     restart: unless-stopped
+    <<: *common-env
     environment:
       REDIS_HOSTS: "local:redis:6379"
     ports:
