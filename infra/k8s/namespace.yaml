@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cms-platform
+  labels:
+    app: cms-platform
+    environment: production

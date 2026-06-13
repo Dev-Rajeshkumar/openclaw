@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: strapi-api
+  namespace: cms-platform
+  labels:
+    app: strapi-api
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: strapi-api
+  template:
+    metadata:
+      labels:
+        app: strapi-api
+    spec:
+      containers:
+        - name: strapi
+          image: your-registry/cms-api:latest
+          ports:
+            - containerPort: 1337
+          envFrom:
+            - configMapRef:
+                name: cms-config
+            - secretRef:
+                name: cms-secrets
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: 1337
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: 1337
+            initialDelaySeconds: 60
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: strapi-service
+  namespace: cms-platform
+spec:
+  selector:
+    app: strapi-api
+  ports:
+    - port: 1337
+      targetPort: 1337
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: strapi-hpa
+  namespace: cms-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: strapi-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

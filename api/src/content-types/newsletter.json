@@ -1,0 +1,60 @@
+{
+  "kind": "collectionType",
+  "collectionName": "newsletters",
+  "info": {
+    "name": "Newsletter",
+    "description": "Newsletter with MJML template and segment targeting"
+  },
+  "attributes": {
+    "subject": {
+      "type": "string",
+      "required": true,
+      "maxLength": 100
+    },
+    "body": {
+      "type": "richtext",
+      "required": true,
+      "description": "MJML content with Handlebars variables"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["draft", "queued", "sending", "sent", "failed"],
+      "default": "draft"
+    },
+    "segment": {
+      "type": "json",
+      "description": "Filter criteria: tags, roles, locale"
+    },
+    "priority": {
+      "type": "integer",
+      "default": 5,
+      "min": 1,
+      "max": 10
+    },
+    "scheduledSendAt": {
+      "type": "datetime"
+    },
+    "sentAt": {
+      "type": "datetime"
+    },
+    "totalSent": {
+      "type": "integer",
+      "default": 0,
+      "private": true
+    },
+    "totalOpens": {
+      "type": "integer",
+      "default": 0,
+      "private": true
+    },
+    "totalClicks": {
+      "type": "integer",
+      "default": 0,
+      "private": true
+    },
+    "testOnly": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

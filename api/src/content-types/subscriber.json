@@ -1,0 +1,67 @@
+{
+  "kind": "collectionType",
+  "collectionName": "subscribers",
+  "info": {
+    "name": "Subscriber",
+    "description": "Newsletter subscriber with preferences"
+  },
+  "attributes": {
+    "email": {
+      "type": "email",
+      "required": true,
+      "unique": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "locale": {
+      "type": "string",
+      "default": "en"
+    },
+    "tags": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::tag.tag"
+    },
+    "confirmed": {
+      "type": "boolean",
+      "default": false
+    },
+    "confirmToken": {
+      "type": "string",
+      "private": true
+    },
+    "unsubscribeToken": {
+      "type": "string",
+      "private": true
+    },
+    "preferences": {
+      "type": "json",
+      "default": {
+        "newsletter": true,
+        "comments": true,
+        "reactions": false
+      }
+    },
+    "subscribedAt": {
+      "type": "datetime"
+    },
+    "unsubscribedAt": {
+      "type": "datetime"
+    },
+    "lastEmailSentAt": {
+      "type": "datetime",
+      "private": true
+    },
+    "openCount": {
+      "type": "integer",
+      "default": 0,
+      "private": true
+    },
+    "clickCount": {
+      "type": "integer",
+      "default": 0,
+      "private": true
+    }
+  }
+}

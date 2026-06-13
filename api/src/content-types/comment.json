@@ -1,0 +1,66 @@
+{
+  "kind": "collectionType",
+  "collectionName": "comments",
+  "info": {
+    "name": "Comment",
+    "description": "Threaded comments with moderation"
+  },
+  "attributes": {
+    "content": {
+      "type": "text",
+      "required": true,
+      "maxLength": 2000
+    },
+    "authorName": {
+      "type": "string",
+      "required": true
+    },
+    "authorEmail": {
+      "type": "email",
+      "required": true
+    },
+    "author": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "post": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::post.post"
+    },
+    "parent": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::comment.comment"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["pending", "approved", "rejected", "spam", "flagged"],
+      "default": "pending"
+    },
+    "spamScore": {
+      "type": "float",
+      "default": 0,
+      "private": true
+    },
+    "moderatedAt": {
+      "type": "datetime"
+    },
+    "ipAddress": {
+      "type": "string",
+      "private": true
+    },
+    "userAgent": {
+      "type": "string",
+      "private": true
+    },
+    "editedAt": {
+      "type": "datetime"
+    },
+    "locale": {
+      "type": "string",
+      "default": "en"
+    }
+  }
+}

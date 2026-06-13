@@ -1,0 +1,594 @@
+// Prisma Schema — CMS Platform
+// Dual ORM: Strapi ORM for content, Prisma for custom business logic
+//
+// Usage:
+//   npx prisma generate     → Generate Prisma Client
+//   npx prisma db push     → Push schema to DB (dev)
+//   npx prisma migrate dev  → Create migration
+//   npx prisma studio      → Open Prisma Studio (GUI)
+//   npx prisma db seed    → Run seed script
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "filteredRelationCount"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STRAPI CORE TABLES (mirrored for Prisma access)
+// These tables are created by Strapi migrations.
+// Prisma reads/writes them for custom queries.
+// ═══════════════════════════════════════════════════════════════
+
+model Post {
+  id                String    @id @default(cuid()) @map("_id")
+  title             String
+  slug              String    @unique
+  content           String    @db.Text
+  excerpt           String?   @db.Text
+  status            String    @default("draft") // draft | published | archived
+  featured          Boolean   @default(false)
+  publishedAt       DateTime? @map("published_at")
+  scheduledPublishAt DateTime? @map("scheduled_publish_at")
+  readingTimeMinutes Int       @default(0) @map("reading_time_minutes")
+  seoTitle          String?   @map("seo_title")
+  seoDescription    String?   @map("seo_description")
+  seoKeywords       String?   @map("seo_keywords")
+  allowComments     Boolean   @default(true) @map("allow_comments")
+  viewCount         Int       @default(0) @map("view_count")
+  contentScore      Float?    @map("content_score") // AI-generated score 0-100
+  locale            String    @default("en")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  author            User?     @relation(fields: [authorId], references: [id])
+  authorId          String?   @map("author_id")
+  tags              Tag[]
+  categories        Category[]
+  comments          Comment[]
+  reactions         Reaction[]
+  pageViews         PageView[]
+  scrollEvents      ScrollEvent[]
+  engagement        PostEngagement?
+  shares            PostShare[]
+  seoTracking       PostSeoTracking[]
+
+  @@map("posts")
+  @@index([status, publishedAt])
+  @@index([slug])
+  @@index([authorId])
+  @@index([locale])
+}
+
+model Tag {
+  id        String   @id @default(cuid()) @map("_id")
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  posts     Post[]
+
+  @@map("tags")
+}
+
+model Category {
+  id        String   @id @default(cuid()) @map("_id")
+  name      String   @unique
+  slug      String   @unique
+  parentId  String?  @map("parent_id")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  posts     Post[]
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+
+  @@map("categories")
+}
+
+model User {
+  id              String   @id @default(cuid()) @map("_id")
+  email           String   @unique
+  username        String   @unique
+  password        String
+  role            String   @default("author") // admin | editor | author | subscriber
+  bio             String?  @db.Text
+  avatarUrl       String?  @map("avatar_url")
+  socialLinks     Json?    @map("social_links") // { twitter, github, website }
+  locale          String   @default("en")
+  timezone        String   @default("UTC")
+  emailVerified   Boolean  @default(false) @map("email_verified")
+  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  twoFactorSecret String?  @map("two_factor_secret")
+  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  posts           Post[]
+  comments        Comment[]
+  reactions       Reaction[]
+  sessions        UserSession[]
+  preferences     UserPreferences?
+
+  @@map("users")
+  @@index([email])
+  @@index([role])
+}
+
+model Comment {
+  id              String   @id @default(cuid()) @map("_id")
+  content         String   @db.Text
+  status          String   @default("pending") // pending | approved | rejected | spam
+  authorName      String?  @map("author_name")
+  authorEmail     String?  @map("author_email")
+  authorWebsite   String?  @map("author_website")
+  sentimentScore  Float?   @map("sentiment_score") // AI-analyzed: -1 to 1
+  toxicityScore   Float?   @map("toxicity_score") // AI-analyzed: 0 to 1
+  spamScore       Float    @default(0) @map("spam_score")
+  editCount       Int      @default(0) @map("edit_count")
+  editedAt        DateTime? @map("edited_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  post            Post     @relation(fields: [postId], references: [id])
+  postId          String   @map("post_id")
+  author          User?    @relation(fields: [authorId], references: [id])
+  authorId        String?  @map("author_id")
+  parent          Comment? @relation("CommentThread", fields: [parentId], references: [id])
+  parentId        String?  @map("parent_id")
+  replies         Comment[] @relation("CommentThread")
+  reactions       Reaction[]
+  reports         CommentReport[]
+
+  @@map("comments")
+  @@index([postId, status])
+  @@index([createdAt])
+}
+
+model Reaction {
+  id          String   @id @default(cuid()) @map("_id")
+  type        String   // like | love | laugh | surprised | sad | angry | upvote | downvote
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @map("user_id")
+  post        Post?    @relation(fields: [postId], references: [id])
+  postId      String?  @map("post_id")
+  comment     Comment? @relation(fields: [commentId], references: [id])
+  commentId   String?  @map("comment_id")
+
+  @@unique([userId, postId, type])
+  @@unique([userId, commentId, type])
+  @@map("reactions")
+  @@index([postId])
+  @@index([commentId])
+}
+
+model CommentReport {
+  id          String   @id @default(cuid()) @map("_id")
+  reason      String   // spam | harassment | hate_speech | misinformation | other
+  description String?  @db.Text
+  status      String   @default("open") // open | reviewed | resolved | dismissed
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  comment     Comment  @relation(fields: [commentId], references: [id])
+  commentId   String   @map("comment_id")
+  reporterId  String?  @map("reporter_id")
+
+  @@map("comment_reports")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NEWSLETTER SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+model Subscriber {
+  id              String   @id @default(cuid()) @map("_id")
+  email           String   @unique
+  name            String?
+  locale          String   @default("en")
+  status          String   @default("pending") // pending | confirmed | unsubscribed | bounced
+  confirmToken    String?  @unique @map("confirm_token")
+  unsubscribeToken String @unique @map("unsubscribe_token")
+  doubleOptInAt   DateTime? @map("double_opt_in_at")
+  subscribedAt    DateTime @default(now()) @map("subscribed_at")
+  unsubscribedAt  DateTime? @map("unsubscribed_at")
+  tags            String[] @default([])
+  engagementScore Float    @default(0) @map("engagement_score")
+  churnRisk       Float    @default(0) @map("churn_risk") // 0-1 predicted
+  lastOpenAt      DateTime? @map("last_open_at")
+  lastClickAt     DateTime? @map("last_click_at")
+  totalOpens      Int      @default(0) @map("total_opens")
+  totalClicks     Int      @default(0) @map("total_clicks")
+
+  emailEvents     NewsletterEmailEvent[]
+
+  @@map("subscribers")
+  @@index([status])
+  @@index([engagementScore])
+}
+
+model Newsletter {
+  id          String   @id @default(cuid()) @map("_id")
+  subject     String
+  previewText String?  @map("preview_text")
+  bodyHtml    String   @map("body_html") @db.Text
+  bodyMjml    String?  @map("body_mjml") @db.Text
+  status      String   @default("draft") // draft | scheduled | sending | sent | failed
+  segment     Json?    // { tags, locales, roles, engagementLevel }
+  scheduledAt DateTime? @map("scheduled_at")
+  sentAt      DateTime? @map("sent_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  logs        NewsletterLog[]
+
+  @@map("newsletters")
+}
+
+model NewsletterLog {
+  id              String   @id @default(cuid()) @map("_id")
+  sentAt          DateTime @default(now()) @map("sent_at")
+  totalSubscribers Int     @map("total_subscribers")
+  sentCount       Int      @map("sent_count")
+  failedCount     Int      @default(0) @map("failed_count")
+  openCount       Int      @default(0) @map("open_count")
+  clickCount      Int      @default(0) @map("click_count")
+  bounceCount     Int      @default(0) @map("bounce_count")
+  unsubscribeCount Int     @default(0) @map("unsubscribe_count")
+  avgOpenRate     Float    @default(0) @map("avg_open_rate")
+
+  newsletter      Newsletter @relation(fields: [newsletterId], references: [id])
+  newsletterId    String   @map("newsletter_id")
+
+  @@map("newsletter_logs")
+  @@index([sentAt])
+}
+
+model NewsletterEmailEvent {
+  id              String   @id @default(cuid()) @map("_id")
+  eventType       String   // sent | delivered | open | click | bounce | unsubscribe
+  sentAt          DateTime? @map("sent_at")
+  openedAt        DateTime? @map("opened_at")
+  clickedAt       DateTime? @map("clicked_at")
+  clickedUrl      String?  @map("clicked_url")
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+
+  subscriber      Subscriber @relation(fields: [subscriberId], references: [id])
+  subscriberId    String   @map("subscriber_id")
+  newsletterLogId String?  @map("newsletter_log_id")
+
+  @@map("newsletter_email_events")
+  @@index([subscriberId])
+  @@index([eventType])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// POST-WISE DEEP ANALYTICS
+// ═══════════════════════════════════════════════════════════════
+
+model PageView {
+  id          String   @id @default(cuid()) @map("_id")
+  viewedAt    DateTime @default(now()) @map("viewed_at")
+  ipAddress   String   @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  referrer    String?
+  visitorId   String?  @map("visitor_id") // cookie-based visitor fingerprint
+
+  post        Post     @relation(fields: [postId], references: [id])
+  postId      String   @map("post_id")
+  userId      String?  @map("user_id")
+
+  @@map("page_views")
+  @@index([postId, viewedAt])
+  @@index([visitorId])
+}
+
+model ScrollEvent {
+  id          String   @id @default(cuid()) @map("_id")
+  depth       Int      // 25, 50, 75, or 100
+  timeToReach Int      @map("time_to_reach") // seconds from page load
+  recordedAt  DateTime @default(now()) @map("recorded_at")
+
+  post        Post     @relation(fields: [postId], references: [id])
+  postId      String   @map("post_id")
+  visitorId   String?  @map("visitor_id")
+
+  @@map("scroll_events")
+  @@index([postId])
+}
+
+model PostEngagement {
+  id                String   @id @default(cuid()) @map("_id")
+  avgTimeOnPage     Float    @default(0) @map("avg_time_on_page") // seconds
+  readCompletionRate Float   @default(0) @map("read_completion_rate") // 0-1
+  returningVisitorRate Float @default(0) @map("returning_visitor_rate") // 0-1
+  bounceRate        Float    @default(0) @map("bounce_rate")
+  scroll25pct       Float    @default(0) @map("scroll_25pct") // avg % who reach 25%
+  scroll50pct       Float    @default(0) @map("scroll_50pct")
+  scroll75pct       Float    @default(0) @map("scroll_75pct")
+  scroll100pct      Float    @default(0) @map("scroll_100pct")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  post              Post     @unique @relation(fields: [postId], references: [id])
+  postId            String   @unique @map("post_id")
+
+  @@map("post_engagement")
+}
+
+model PostShare {
+  id          String   @id @default(cuid()) @map("_id")
+  platform    String   // twitter | facebook | linkedin | reddit | hackernews | other
+  sharedAt    DateTime @default(now()) @map("shared_at")
+
+  post        Post     @relation(fields: [postId], references: [id])
+  postId      String   @map("post_id")
+
+  @@map("post_shares")
+  @@index([postId, sharedAt])
+}
+
+model PostSeoTracking {
+  id          String   @id @default(cuid()) @map("_id")
+  keyword     String
+  position    Int?     // search engine position
+  checkedAt   DateTime @default(now()) @map("checked_at")
+
+  post        Post     @relation(fields: [postId], references: [id])
+  postId      String   @map("post_id")
+
+  @@map("post_seo_tracking")
+  @@index([postId, keyword])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FORMS BUILDER SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+model Form {
+  id          String       @id @default(cuid()) @map("_id")
+  name        String
+  slug        String       @unique
+  description String?      @db.Text
+  fields      Json         // [{ type, label, required, options, conditionalLogic }]
+  settings    Json?        // { submitMessage, redirectUrl, notifications, captcha }
+  status      String       @default("active") // active | archived
+  submissionCount Int      @default(0) @map("submission_count")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  submissions FormSubmission[]
+
+  @@map("forms")
+  @@index([slug])
+}
+
+model FormSubmission {
+  id          String   @id @default(cuid()) @map("_id")
+  data        Json     // { fieldId: value, ... }
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  completionTime Int?  @map("completion_time") // seconds
+  isSpam      Boolean  @default(false) @map("is_spam")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  form        Form     @relation(fields: [formId], references: [id])
+  formId      String   @map("form_id")
+
+  @@map("form_submissions")
+  @@index([formId, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MULTI-SITE / MULTI-TENANT
+// ═══════════════════════════════════════════════════════════════
+
+model Site {
+  id          String   @id @default(cuid()) @map("_id")
+  name        String
+  slug        String   @unique
+  domain      String   @unique
+  description String?  @db.Text
+  theme       Json?    // { colors, fonts, logo }
+  settings    Json?    // { defaultLocale, allowedLocales, features }
+  status      String   @default("active") // active | paused | archived
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("sites")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PAYWALL / SUBSCRIPTION SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+model SubscriptionPlan {
+  id              String   @id @default(cuid()) @map("_id")
+  name            String
+  slug            String   @unique
+  description     String?  @db.Text
+  price           Float    // 0.00 = free
+  currency        String   @default("USD")
+  interval        String   // monthly | yearly
+  features        Json     // { freePostsPerMeter, unlimitedAccess, newsletterPriority }
+  stripePriceId   String?  @map("stripe_price_id")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  subscriptions   Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id              String   @id @default(cuid()) @map("_id")
+  status          String   // active | cancelled | expired | trial
+  currentPeriodStart DateTime @map("current_period_start")
+  currentPeriodEnd   DateTime @map("current_period_end")
+  cancelAtPeriodEnd  Boolean @default(false) @map("cancel_at_period_end")
+  stripeSubscriptionId String? @map("stripe_subscription_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  userId          String   @map("user_id")
+  planId          String   @map("plan_id")
+  plan            SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+  @@index([userId])
+}
+
+model PostAccessLog {
+  id          String   @id @default(cuid()) @map("_id")
+  accessType  String   // free | teaser | full | paywalled
+  accessedAt  DateTime @default(now()) @map("accessed_at")
+
+  userId      String?  @map("user_id")
+  postId      String   @map("post_id")
+
+  @@map("post_access_logs")
+  @@index([userId, postId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COUPON / DISCOUNT SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+model Coupon {
+  id              String   @id @default(cuid()) @map("_id")
+  code            String   @unique
+  discountType    String   // percentage | fixed
+  discountValue   Float    @map("discount_value")
+  maxUses         Int?     @map("max_uses")
+  usedCount       Int      @default(0) @map("used_count")
+  validFrom       DateTime @default(now()) @map("valid_from")
+  validUntil      DateTime? @map("valid_until")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("coupons")
+  @@index([code])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REFERRAL SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+model Referral {
+  id              String   @id @default(cuid()) @map("_id")
+  referralCode    String   @unique @map("referral_code")
+  status          String   @default("pending") // pending | converted | expired
+  rewardType      String?  @map("reward_type") // discount | free_month | credit
+  rewardValue     Float?   @map("reward_value")
+  createdAt       DateTime @default(now()) @map("created_at")
+  convertedAt     DateTime? @map("converted_at")
+
+  referrerId      String   @map("referrer_id")
+  referredEmail   String   @map("referred_email")
+  referredUserId  String?  @map("referred_user_id")
+
+  @@map("referrals")
+  @@index([referralCode])
+  @@index([referrerId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// USER SESSIONS & PREFERENCES
+// ═══════════════════════════════════════════════════════════════
+
+model UserSession {
+  id          String   @id @default(cuid()) @map("_id")
+  token       String   @unique
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @map("user_id")
+
+  @@map("user_sessions")
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model UserPreferences {
+  id                String   @id @default(cuid()) @map("_id")
+  emailNotifications Boolean @default(true) @map("email_notifications")
+  commentNotifications Boolean @default(true) @map("comment_notifications")
+  newsletterFrequency String  @default("weekly") // daily | weekly | monthly
+  theme             String   @default("system") // light | dark | system
+  fontSize          String   @default("medium") // small | medium | large
+  reducedMotion     Boolean  @default(false) @map("reduced_motion")
+  highContrast      Boolean  @default(false) @map("high_contrast")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user              User     @unique @relation(fields: [userId], references: [id])
+  userId            String   @unique @map("user_id")
+
+  @@map("user_preferences")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════════════════
+
+model AuditLog {
+  id          String   @id @default(cuid()) @map("_id")
+  action      String   // create | update | delete | login | publish | moderate
+  entityType  String   @map("entity_type") // post | comment | user | newsletter
+  entityId    String   @map("entity_id")
+  oldValue    Json?    @map("old_value")
+  newValue    Json?    @map("new_value")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  actorId     String?  @map("actor_id")
+
+  @@map("audit_logs")
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEBHOOKS
+// ═══════════════════════════════════════════════════════════════
+
+model Webhook {
+  id          String   @id @default(cuid()) @map("_id")
+  name        String
+  url         String
+  events      String[] // [post.published, comment.created, user.registered]
+  secret      String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  deliveries  WebhookDelivery[]
+
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id          String   @id @default(cuid()) @map("_id")
+  event       String
+  payload     Json
+  status      String   // pending | success | failed
+  statusCode  Int?     @map("status_code")
+  response    String?  @db.Text
+  attempt     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  webhook     Webhook  @relation(fields: [webhookId], references: [id])
+  webhookId   String   @map("webhook_id")
+
+  @@map("webhook_deliveries")
+  @@index([webhookId, status])
+}

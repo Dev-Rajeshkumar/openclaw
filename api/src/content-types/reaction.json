@@ -1,0 +1,29 @@
+{
+  "kind": "collectionType",
+  "collectionName": "reactions",
+  "info": {
+    "name": "Reaction",
+    "description": "Reactions on posts and comments"
+  },
+  "attributes": {
+    "type": {
+      "type": "enumeration",
+      "enum": ["like", "upvote", "downvote", "love", "laugh", "surprised", "sad", "angry"],
+      "required": true
+    },
+    "contentType": {
+      "type": "string",
+      "required": true,
+      "description": "e.g. 'post', 'comment'"
+    },
+    "contentId": {
+      "type": "integer",
+      "required": true
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

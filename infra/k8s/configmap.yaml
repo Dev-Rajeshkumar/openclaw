@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cms-config
+  namespace: cms-platform
+data:
+  NODE_ENV: "production"
+  DATABASE_CLIENT: "postgres"
+  DATABASE_PORT: "5432"
+  DATABASE_SSL: "true"
+  REDIS_URL: "redis://redis-service:6379"
+  MEILI_HOST: "http://meilisearch-service:7700"
+  MINIO_ENDPOINT: "minio-service"
+  MINIO_PORT: "9000"
+  MINIO_USE_SSL: "false"
+  MINIO_BUCKET: "cms-media"
+  SMTP_HOST: "smtp"
+  SMTP_PORT: "587"
+  DEFAULT_FROM_EMAIL: "noreply@yourdomain.com"
+  FRONTEND_URL: "https://yourdomain.com"
+  API_URL: "https://api.yourdomain.com"
+  AI_PROVIDER: "openrouter"
