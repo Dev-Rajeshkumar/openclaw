@@ -59,7 +59,7 @@ export default ({ env }) => ({
     config: {
       provider: 'local',
       providerOptions: {
-        sizeLimit: 10 * 1024 * 1024, // 10MB
+        sizeLimit: 10 * 1024 * 1024,
       },
       breakpoints: {
         xlarge: 1920,
@@ -150,5 +150,30 @@ export default ({ env }) => ({
   'activity-feed': {
     enabled: true,
     resolve: './src/plugins/activity-feed',
+  },
+
+  rbac: {
+    enabled: true,
+    resolve: './src/plugins/rbac',
+  },
+
+  seo: {
+    enabled: true,
+    resolve: './src/plugins/seo',
+  },
+
+  'media-optimizer': {
+    enabled: true,
+    resolve: './src/plugins/media-optimizer',
+  },
+
+  'comment-moderation': {
+    enabled: true,
+    resolve: './src/plugins/comment-moderation',
+  },
+
+  'uptime-monitor': {
+    enabled: true,
+    resolve: './src/plugins/uptime-monitor',
   },
 });
