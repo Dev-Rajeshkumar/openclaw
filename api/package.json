@@ -10,7 +10,10 @@
     "test": "jest --coverage",
     "lint": "eslint src/",
     "migrate": "strapi migrate",
-    "seed": "ts-node scripts/seed.ts"
+    "seed": "ts-node scripts/seed.ts",
+    "test:integration": "jest --testPathPattern=integration --runInBand",
+    "test:unit": "jest --testPathPattern=__tests__ --testPathIgnorePatterns=integration",
+    "aggregate": "ts-node scripts/aggregate.ts"
   },
   "dependencies": {
     "@strapi/strapi": "^5.0.0",
@@ -33,6 +36,9 @@
     "express-rate-limit": "^7.1.0",
     "helmet": "^7.1.0",
     "winston": "^3.11.0",
+    "helmet": "^7.1.0",
+    "socket.io": "^4.7.0",
+    "jsonwebtoken": "^9.0.0",
     "zod": "^3.22.0",
     "openai": "^4.20.0",
     "axios": "^1.6.0"
