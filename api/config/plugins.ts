@@ -126,4 +126,9 @@ export default ({ env }) => ({
     enabled: true,
     resolve: './src/plugins/health',
   },
+
+  'email-bounce': {
+    enabled: true,
+    resolve: './src/plugins/email-bounce',
+  },
 });
